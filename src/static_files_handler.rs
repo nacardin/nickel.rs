@@ -4,7 +4,7 @@ use std::fs;
 
 use hyper::method::Method::{Get, Head};
 
-use status::StatusCode;
+use hyper::status::StatusCode;
 use request::Request;
 use response::Response;
 use middleware::{Middleware, MiddlewareResult};

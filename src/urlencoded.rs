@@ -1,6 +1,5 @@
 use groupable::Groupable;
-use hyper::uri::RequestUri;
-use hyper::uri::RequestUri::{Star, AbsoluteUri, AbsolutePath, Authority};
+use hyper::uri::Uri;
 use std::collections::HashMap;
 use url::{form_urlencoded, Url};
 

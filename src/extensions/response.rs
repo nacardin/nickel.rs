@@ -1,6 +1,6 @@
 use {Response, MiddlewareResult};
 use hyper::header;
-use status::StatusCode;
+use hyper::status::StatusCode;
 
 pub trait Redirect: Sized {
     type Result;

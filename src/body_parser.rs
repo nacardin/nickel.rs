@@ -1,9 +1,9 @@
 use hyper::header::ContentType;
-use hyper::mime::{Mime, SubLevel, TopLevel};
+use hyper::mime::Mime;
 use serialize::{Decodable, json};
 use request::Request;
 use plugin::{Plugin, Pluggable};
-use status::StatusCode;
+use hyper::status::StatusCode;
 use std::error::Error as StdError;
 use std::fmt;
 use std::io::{self, ErrorKind, Read};

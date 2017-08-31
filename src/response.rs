@@ -8,9 +8,8 @@ use serialize::Encodable;
 use hyper::status::StatusCode;
 use hyper::server::Response as HyperResponse;
 use hyper::header::{
-    Headers, Date, HttpDate, Server, ContentType, ContentLength, Header, HeaderFormat
+    Headers, Date, HttpDate, Server, ContentType, ContentLength, Header
 };
-use hyper::net::{Fresh, Streaming};
 use time;
 use mimes::MediaType;
 use mustache;
@@ -192,7 +191,7 @@ impl<'a, D> Response<'a, D, Fresh> {
     /// }
     /// ```
     pub fn set_header_fallback<F, H>(&mut self, f: F)
-            where H: Header + HeaderFormat, F: FnOnce() -> H {
+            where H: Header, F: FnOnce() -> H {
         let headers = self.origin.headers_mut();
         if !headers.has::<H>() { headers.set(f()) }
     }

@@ -2,7 +2,7 @@ use std::fs::File;
 use std::path::{PathBuf, Path};
 use std::io::Read;
 
-use hyper::uri::RequestUri::AbsolutePath;
+use hyper::uri::Uri;
 use hyper::method::Method::{Get, Head, Options};
 use hyper::status::StatusCode;
 use hyper::header;
@@ -53,10 +53,7 @@ impl FaviconHandler {
 
     #[inline]
     pub fn is_favicon_request<D>(req: &Request<D>) -> bool {
-        match req.origin.uri {
-            AbsolutePath(ref path) => &**path == "/favicon.ico",
-            _                      => false
-        }
+        req.origin.uri.path() == "/favicon.ico"
     }
 
     pub fn handle_request<'a, D>(&self, req: &Request<D>, mut res: Response<'a, D>) -> MiddlewareResult<'a, D> {

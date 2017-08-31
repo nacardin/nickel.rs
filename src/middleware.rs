@@ -1,7 +1,6 @@
 use request::Request;
 use response::Response;
 use nickel_error::NickelError;
-use hyper::net;
 
 pub use self::Action::{Continue, Halt};
 

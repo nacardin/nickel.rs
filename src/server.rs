@@ -3,9 +3,8 @@ use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 use std::time::Duration;
 use hyper::Result as HttpResult;
-use hyper::server::{Request, Response, Handler, Listening};
+use hyper::server::{Request, Response};
 use hyper::server::Server as HyperServer;
-use hyper::net::SslServer;
 
 use middleware::MiddlewareStack;
 use request;
@@ -15,6 +14,11 @@ pub struct Server<D> {
     middleware_stack: MiddlewareStack<D>,
     templates: response::TemplateCache,
     shared_data: D,
+}
+
+
+trait Handler {
+
 }
 
 // FIXME: Any better coherence solutions?
@@ -60,26 +64,27 @@ impl<D: Sync + Send + 'static> Server<D> {
         listening.map(ListeningServer)
     }
 
-    pub fn serve_https<A,S>(self,
-                            addr: A,
-                            keep_alive_timeout: Option<Duration>,
-                            thread_count: Option<usize>,
-                            ssl: S)
-                            -> HttpResult<ListeningServer>
-        where A: ToSocketAddrs,
-              S: SslServer + Clone + Send + 'static {
-        let arc = ArcServer(Arc::new(self));
-        let mut server = try!(HyperServer::https(addr, ssl));
+    //TODO: SSL
+    // pub fn serve_https<A,S>(self,
+    //                         addr: A,
+    //                         keep_alive_timeout: Option<Duration>,
+    //                         thread_count: Option<usize>,
+    //                         ssl: S)
+    //                         -> HttpResult<ListeningServer>
+    //     where A: ToSocketAddrs,
+    //           S: SslServer + Clone + Send + 'static {
+    //     let arc = ArcServer(Arc::new(self));
+    //     let mut server = try!(HyperServer::https(addr, ssl));
 
-        server.keep_alive(keep_alive_timeout);
+    //     server.keep_alive(keep_alive_timeout);
 
-        let listening = match thread_count {
-            Some(threads) => server.handle_threads(arc, threads),
-            None => server.handle(arc),
-        };
+    //     let listening = match thread_count {
+    //         Some(threads) => server.handle_threads(arc, threads),
+    //         None => server.handle(arc),
+    //     };
 
-        listening.map(ListeningServer)
-    }
+    //     listening.map(ListeningServer)
+    // }
 }
 
 /// A server listeing on a socket
