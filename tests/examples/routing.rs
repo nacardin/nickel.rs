@@ -1,6 +1,6 @@
 use util::*;
 
-use hyper::status::StatusCode;
+use hyper::StatusCode;
 use hyper::client::Response;
 
 fn with_path<F>(path: &str, f: F) where F: FnOnce(&mut Response) {

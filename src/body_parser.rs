@@ -1,9 +1,9 @@
 use hyper::header::ContentType;
-use hyper::mime::Mime;
+use hyper::mime;
 use serialize::{Decodable, json};
 use request::Request;
 use plugin::{Plugin, Pluggable};
-use hyper::status::StatusCode;
+use hyper::StatusCode;
 use std::error::Error as StdError;
 use std::fmt;
 use std::io::{self, ErrorKind, Read};
@@ -37,15 +37,15 @@ impl<'mw, 'conn, D> Plugin<Request<'mw, 'conn, D>> for FormBodyParser {
 
     fn eval(req: &mut Request<D>) -> Result<Params, BodyError> {
         match req.origin.headers.get::<ContentType>() {
-            Some(&ContentType(Mime(
-                TopLevel::Application,
-                SubLevel::WwwFormUrlEncoded,
-                _
-            ))) => {
-                let body = try!(req.get_ref::<BodyReader>());
-                Ok(urlencoded::parse(&*body))
-            },
-            _ => Err(BodyError::WrongContentType)
+            Some(&ContentType(mime1)) => {
+                if mime1.type_() == mime::APPLICATION && mime1.subtype() == mime::WWW_FORM_URLENCODED {
+                    let body = try!(req.get_ref::<BodyReader>());
+                    Ok(urlencoded::parse(&*body))
+                } else {
+                    Err(BodyError::WrongContentType)
+                }
+            }
+            _ => Err(BodyError::WrongContentType),
         }
     }
 }
@@ -83,11 +83,10 @@ impl<'mw, 'conn, D> JsonBody for Request<'mw, 'conn, D> {
     // Would be good to capture parsing error rather than a generic io::Error.
     // FIXME: Do the content-type check
     fn json_as<T: Decodable>(&mut self) -> Result<T, io::Error> {
-        self.get_ref::<BodyReader>().and_then(|body|
-            json::decode::<T>(&*body).map_err(|err|
-                io::Error::new(ErrorKind::Other, format!("Parse error: {}", err))
-            )
-        )
+        self.get_ref::<BodyReader>().and_then(|body| {
+            json::decode::<T>(&*body)
+                .map_err(|err| io::Error::new(ErrorKind::Other, format!("Parse error: {}", err)))
+        })
     }
 }
 
@@ -107,14 +106,14 @@ impl StdError for BodyError {
     fn description(&self) -> &str {
         match *self {
             BodyError::Io(ref err) => err.description(),
-            BodyError::WrongContentType => "Wrong content type"
+            BodyError::WrongContentType => "Wrong content type",
         }
     }
 
     fn cause(&self) -> Option<&StdError> {
         match *self {
             BodyError::Io(ref err) => Some(err),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -124,4 +123,3 @@ impl fmt::Display for BodyError {
         write!(out, "{}", self.description())
     }
 }
-

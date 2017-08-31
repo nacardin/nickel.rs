@@ -2,9 +2,9 @@ use std::path::{Path, PathBuf};
 use std::io::ErrorKind::NotFound;
 use std::fs;
 
-use hyper::method::Method::{Get, Head};
+use hyper::Method::{Get, Head};
 
-use hyper::status::StatusCode;
+use hyper::StatusCode;
 use request::Request;
 use response::Response;
 use middleware::{Middleware, MiddlewareResult};
@@ -20,7 +20,8 @@ impl<D> Middleware<D> for StaticFilesHandler {
     fn invoke<'a>(&self, req: &mut Request<D>, res: Response<'a, D>)
             -> MiddlewareResult<'a, D> {
         match req.origin.method {
-            Get | Head => self.with_file(self.extract_path(req), res),
+            Get => self.with_file(self.extract_path(req), res),
+            Head => self.with_file(self.extract_path(req), res),
             _ => res.next_middleware()
         }
     }

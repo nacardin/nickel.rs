@@ -77,7 +77,7 @@ impl<D, M: Middleware<D>> Middleware<D> for Mount<M> {
 
             let subpath = match req.origin.uri.path() {
                 p if p.starts_with(&*self.mount_point) => {
-                    format!("/{}", &path[self.mount_point.len()..])
+                    format!("/{}", &p[self.mount_point.len()..])
                 },
                 _ => return Ok(Continue(res))
             };

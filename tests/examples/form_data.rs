@@ -1,6 +1,6 @@
 use hyper::client::Client;
 use hyper::header::ContentType;
-use hyper::status::StatusCode;
+use hyper::StatusCode;
 use util::{read_body_to_string, read_url, run_example};
 
 #[test]

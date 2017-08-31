@@ -3,8 +3,7 @@ use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 use std::time::Duration;
 use hyper::Result as HttpResult;
-use hyper::server::{Request, Response};
-use hyper::server::Server as HyperServer;
+use hyper::server::{Http, Service, Request, Response, Server as HyperServer};
 
 use middleware::MiddlewareStack;
 use request;
@@ -17,15 +16,11 @@ pub struct Server<D> {
 }
 
 
-trait Handler {
-
-}
-
 // FIXME: Any better coherence solutions?
 struct ArcServer<D>(Arc<Server<D>>);
 
-impl<D: Sync + Send + 'static> Handler for ArcServer<D> {
-    fn handle<'a, 'k>(&'a self, req: Request<'a, 'k>, res: Response<'a>) {
+impl<D: Sync + Send + 'static> Service for ArcServer<D> {
+    fn call<'a, 'k>(&'a self, req: Request<'a, 'k>, res: Response<'a>) {
         let nickel_req = request::Request::from_internal(req,
                                                          &self.0.shared_data);
 
@@ -52,16 +47,17 @@ impl<D: Sync + Send + 'static> Server<D> {
                                    thread_count: Option<usize>)
                                     -> HttpResult<ListeningServer> {
         let arc = ArcServer(Arc::new(self));
-        let mut server = try!(HyperServer::http(addr));
+
+        let server = Http::new().bind(&addr, arc).unwrap();
 
         server.keep_alive(keep_alive_timeout);
 
-        let listening = match thread_count {
-            Some(threads) => server.handle_threads(arc, threads),
-            None => server.handle(arc),
-        };
+        // let listening = match thread_count {
+        //     Some(threads) => server.handle_threads(arc, threads),
+        //     None => server.handle(arc),
+        // };
 
-        listening.map(ListeningServer)
+        ListeningServer::<D>(server)
     }
 
     //TODO: SSL
@@ -86,11 +82,11 @@ impl<D: Sync + Send + 'static> Server<D> {
     //     listening.map(ListeningServer)
     // }
 }
-
+use std::any::Any;
 /// A server listeing on a socket
-pub struct ListeningServer(Listening);
+pub struct ListeningServer<D>(HyperServer<ArcServer<D>, Any>);
 
-impl ListeningServer {
+impl ListeningServer<Any> {
     /// Gets the `SocketAddr` which the server is currently listening on.
     pub fn socket(&self) -> SocketAddr {
         self.0.socket

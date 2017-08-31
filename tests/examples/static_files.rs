@@ -1,6 +1,6 @@
 use util::*;
 
-use hyper::status::StatusCode;
+use hyper::StatusCode;
 use hyper::client::Response;
 
 use std::io::{Read, Write};

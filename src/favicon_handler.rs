@@ -2,9 +2,9 @@ use std::fs::File;
 use std::path::{PathBuf, Path};
 use std::io::Read;
 
-use hyper::uri::Uri;
-use hyper::method::Method::{Get, Head, Options};
-use hyper::status::StatusCode;
+use hyper::Uri;
+use hyper::Method::{Get, Head, Options};
+use hyper::StatusCode;
 use hyper::header;
 
 use request::Request;
@@ -58,7 +58,10 @@ impl FaviconHandler {
 
     pub fn handle_request<'a, D>(&self, req: &Request<D>, mut res: Response<'a, D>) -> MiddlewareResult<'a, D> {
         match req.origin.method {
-            Get | Head => {
+            Get => {
+                self.send_favicon(req, res)
+            },
+            Head => {
                 self.send_favicon(req, res)
             },
             Options => {

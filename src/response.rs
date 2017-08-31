@@ -5,11 +5,13 @@ use std::collections::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::path::Path;
 use serialize::Encodable;
-use hyper::status::StatusCode;
+use hyper::StatusCode;
 use hyper::server::Response as HyperResponse;
 use hyper::header::{
     Headers, Date, HttpDate, Server, ContentType, ContentLength, Header
 };
+
+use hyper::Body;
 use time;
 use mimes::MediaType;
 use mustache;
@@ -25,21 +27,21 @@ use typemap::TypeMap;
 pub type TemplateCache = RwLock<HashMap<String, Template>>;
 
 ///A container for the response
-pub struct Response<'a, D: 'a = (), T: 'static + Any = Fresh> {
+pub struct Response<'a, D: 'a = (), T: 'static + Any = Body> {
     ///the original `hyper::server::Response`
     origin: HyperResponse<'a, T>,
     templates: &'a TemplateCache,
     data: &'a D,
     map: TypeMap,
     // This should be FnBox, but that's currently unstable
-    on_send: Vec<Box<FnMut(&mut Response<'a, D, Fresh>)>>
+    on_send: Vec<Box<FnMut(&mut Response<'a, D, Body>)>>
 }
 
-impl<'a, D> Response<'a, D, Fresh> {
-    pub fn from_internal<'c, 'd>(response: HyperResponse<'c, Fresh>,
+impl<'a, D> Response<'a, D, Body> {
+    pub fn from_internal<'c, 'd>(response: HyperResponse<'c, Body>,
                                  templates: &'c TemplateCache,
                                  data: &'c D)
-                                -> Response<'c, D, Fresh> {
+                                -> Response<'c, D, Body> {
         Response {
             origin: response,
             templates: templates,
@@ -150,8 +152,8 @@ impl<'a, D> Response<'a, D, Fresh> {
     //
     // Also, it should only set them if not already set.
     fn set_fallback_headers(&mut self) {
-        self.set_header_fallback(|| Date(HttpDate(time::now_utc())));
-        self.set_header_fallback(|| Server("Nickel".to_string()));
+        self.set_header_fallback(|| Date(HttpDate::from(time::now_utc())));
+        self.set_header_fallback(|| Server::new("Nickel"));
         self.set_header_fallback(|| ContentType(MediaType::Html.into()));
     }
 
@@ -248,7 +250,7 @@ impl<'a, D> Response<'a, D, Fresh> {
         render(self, template, data)
     }
 
-    pub fn start(mut self) -> Result<Response<'a, D, Streaming>, NickelError<'a, D>> {
+    pub fn start(mut self) -> Result<Response<'a, D, Body>, NickelError<'a, D>> {
         let on_send = mem::replace(&mut self.on_send, vec![]);
         for mut f in on_send.into_iter().rev() {
             // TODO: Ensure `f` doesn't call on_send again
@@ -282,7 +284,7 @@ impl<'a, D> Response<'a, D, Fresh> {
     }
 
     pub fn on_send<F>(&mut self, f: F)
-            where F: FnMut(&mut Response<'a, D, Fresh>) + 'static {
+            where F: FnMut(&mut Response<'a, D, Body>) + 'static {
         self.on_send.push(Box::new(f))
     }
 
@@ -295,7 +297,7 @@ impl<'a, D> Response<'a, D, Fresh> {
     }
 }
 
-impl<'a, 'b, D> Write for Response<'a, D, Streaming> {
+impl<'a, 'b, D> Write for Response<'a, D, Body> {
     #[inline(always)]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.origin.write(buf)
@@ -307,7 +309,7 @@ impl<'a, 'b, D> Write for Response<'a, D, Streaming> {
     }
 }
 
-impl<'a, 'b, D> Response<'a, D, Streaming> {
+impl<'a, 'b, D> Response<'a, D, Body> {
     /// In the case of an unrecoverable error while a stream is already in
     /// progress, there is no standard way to signal to the client that an
     /// error has occurred. `bail` will drop the connection and log an error
@@ -369,7 +371,7 @@ fn matches_content_type () {
 
 mod modifier_impls {
     use hyper::header::*;
-    use hyper::status::StatusCode;
+    use hyper::StatusCode;
     use modifier::Modifier;
     use {Response, MediaType};
 

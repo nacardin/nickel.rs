@@ -1,13 +1,14 @@
 use std::borrow::Cow;
-use hyper::status::StatusCode;
+use hyper::StatusCode;
 use std::io;
 use std::error::Error;
 use response::Response;
+use hyper::Body;
 
 /// NickelError is the basic error type for HTTP errors as well as user defined errors.
 /// One can pattern match against the `kind` property to handle the different cases.
 pub struct NickelError<'a, D: 'a = ()> {
-    pub stream: Option<Response<'a, D, Streaming>>,
+    pub stream: Option<Response<'a, D, Body>>,
     pub message: Cow<'static, str>
 }
 
@@ -30,7 +31,7 @@ impl<'a, D> NickelError<'a, D> {
     /// }
     /// # }
     /// ```
-    pub fn new<T>(mut stream: Response<'a, D, Fresh>,
+    pub fn new<T>(mut stream: Response<'a, D, Body>,
                   message: T,
                   status_code: StatusCode) -> NickelError<'a, D>
             where T: Into<Cow<'static, str>> {

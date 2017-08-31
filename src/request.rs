@@ -1,8 +1,8 @@
 use router::RouteResult;
 use plugin::{Extensible, Pluggable};
 use typemap::TypeMap;
-use hyper::server::Request as HyperRequest;
-use hyper::uri::Uri;
+use hyper::Request as HyperRequest;
+use hyper::Uri;
 
 /// A container for all the request data.
 ///
@@ -13,7 +13,7 @@ use hyper::uri::Uri;
 /// the server. It is fixed and longer than `'mw`.
 pub struct Request<'mw, 'server: 'mw, D: 'mw = ()> {
     ///the original `hyper::server::Request`
-    pub origin: HyperRequest<'mw, 'server>,
+    pub origin: HyperRequest,
     ///a `HashMap<String, String>` holding all params with names and values
     pub route_result: Option<RouteResult<'mw, D>>,
 

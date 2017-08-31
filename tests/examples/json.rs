@@ -13,7 +13,7 @@ fn with_path<F>(path: &str, f: F) where F: FnOnce(&mut Response) {
 mod incoming {
     use util::*;
 
-    use hyper::status::StatusCode;
+    use hyper::StatusCode;
     use hyper::client::Response;
 
     fn send_body<F>(body: &str, f: F) where F: FnOnce(&mut Response) {

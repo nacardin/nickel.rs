@@ -56,7 +56,7 @@ mod expect_404 {
     use super::with_paths_and_method;
     use hyper::method::Method;
     use hyper::method::Method::*;
-    use hyper::status::StatusCode;
+    use hyper::StatusCode;
 
     static TEST_METHODS: &'static [Method] = &[Get, Post, Put, Patch, Delete];
 

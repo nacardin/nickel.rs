@@ -2,7 +2,7 @@ use super::with_path;
 use util::*;
 
 use hyper::client::Response;
-use hyper::status::StatusCode;
+use hyper::StatusCode;
 
 fn with_query<F>(query: &str, f: F) where F: FnOnce(&mut Response) {
     with_path(&format!("/get?{}", query), f)
