@@ -124,7 +124,7 @@ dual_impl!((u16, &'static str),
            (u16, String),
            |self, res| {
                 let (status, message) = self;
-                res.send((StatusCode::from_u16(status), message))
+                res.send((StatusCode::try_from(status).unwrap(), message))
             });
 
 // FIXME: Hyper uses traits for headers, so this needs to be a Vec of

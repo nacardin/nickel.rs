@@ -72,10 +72,10 @@ impl<M> Mount<M> {
 }
 
 impl<D, M: Middleware<D>> Middleware<D> for Mount<M> {
-    fn invoke<'mw, 'conn>(&'mw self, req: &mut Request<'mw, 'conn, D>, res: Response<'mw, D>)
+    fn invoke<'mw>(&'mw self, req: &mut Request<'mw, D>, res: Response<'mw, D>)
         -> MiddlewareResult<'mw, D> {
 
-            let subpath = match req.origin.uri.path() {
+            let subpath = match req.origin.path() {
                 p if p.starts_with(&*self.mount_point) => {
                     format!("/{}", &p[self.mount_point.len()..])
                 },

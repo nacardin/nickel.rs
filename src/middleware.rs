@@ -18,13 +18,13 @@ pub enum Action<T=(), U=()> {
 // the usage of + Send is weird here because what we really want is + Static
 // but that's not possible as of today. We have to use + Send for now.
 pub trait Middleware<D>: Send + 'static + Sync {
-    fn invoke<'mw, 'conn>(&'mw self, _req: &mut Request<'mw, 'conn, D>, res: Response<'mw, D, Body>) -> MiddlewareResult<'mw, D> {
+    fn invoke<'mw>(&'mw self, _req: &mut Request<'mw, D>, res: Response<'mw, D, Body>) -> MiddlewareResult<'mw, D> {
         res.next_middleware()
     }
 }
 
-impl<T, D> Middleware<D> for T where T: for<'r, 'mw, 'conn> Fn(&'r mut Request<'mw, 'conn, D>, Response<'mw, D>) -> MiddlewareResult<'mw, D> + Send + Sync + 'static {
-    fn invoke<'mw, 'conn>(&'mw self, req: &mut Request<'mw, 'conn, D>, res: Response<'mw, D>) -> MiddlewareResult<'mw, D> {
+impl<T, D> Middleware<D> for T where T: for<'r, 'mw> Fn(&'r mut Request<'mw, D>, Response<'mw, D>) -> MiddlewareResult<'mw, D> + Send + Sync + 'static {
+    fn invoke<'mw>(&'mw self, req: &mut Request<'mw, D>, res: Response<'mw, D>) -> MiddlewareResult<'mw, D> {
         (*self)(req, res)
     }
 }
@@ -53,14 +53,14 @@ impl<D: 'static> MiddlewareStack<D> {
         self.error_handlers.push(Box::new(handler));
     }
 
-    pub fn invoke<'mw, 'conn>(&'mw self, mut req: Request<'mw, 'conn, D>, mut res: Response<'mw, D>) {
+    pub fn invoke<'mw>(&'mw self, mut req: Request<'mw, D>, mut res: Response<'mw, D>) {
         for handler in self.handlers.iter() {
             match handler.invoke(&mut req, res) {
                 Ok(Halt(res)) => {
                     debug!("Halted {:?} {:?} {:?} {:?}",
-                           req.origin.method,
-                           req.origin.remote_addr,
-                           req.origin.uri,
+                           req.origin.method(),
+                           req.origin.remote_addr(),
+                           req.origin.uri(),
                            res.status());
                     let _ = res.end();
                     return
@@ -68,9 +68,9 @@ impl<D: 'static> MiddlewareStack<D> {
                 Ok(Continue(fresh)) => res = fresh,
                 Err(mut err) => {
                     warn!("{:?} {:?} {:?} {:?} {:?}",
-                          req.origin.method,
-                          req.origin.remote_addr,
-                          req.origin.uri,
+                          req.origin.method(),
+                          req.origin.remote_addr(),
+                          req.origin.uri(),
                           err.message,
                           err.stream.as_ref().map(|s| s.status()));
 
@@ -82,9 +82,9 @@ impl<D: 'static> MiddlewareStack<D> {
                     }
 
                     warn!("Unhandled error: {:?} {:?} {:?} {:?} {:?}",
-                          req.origin.method,
-                          req.origin.remote_addr,
-                          req.origin.uri,
+                          req.origin.method(),
+                          req.origin.remote_addr(),
+                          req.origin.uri(),
                           err.message,
                           err.stream.map(|s| s.status()));
                     return

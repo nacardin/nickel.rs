@@ -1,13 +1,21 @@
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
-use std::time::Duration;
+use std;
 use hyper::Result as HttpResult;
-use hyper::server::{Http, Service, Request, Response, Server as HyperServer};
+use hyper::server::{Http, Service, NewService, Request, Response, Server as HyperServer};
 
 use middleware::MiddlewareStack;
 use request;
 use response;
+
+use futures;
+use futures::future::FutureResult;
+
+use std::time::Duration;
+
+use hyper;
+use hyper::Body;
 
 pub struct Server<D> {
     middleware_stack: MiddlewareStack<D>,
@@ -17,18 +25,49 @@ pub struct Server<D> {
 
 
 // FIXME: Any better coherence solutions?
-struct ArcServer<D>(Arc<Server<D>>);
+pub struct ArcServer<D>(Arc<Server<D>>);
 
 impl<D: Sync + Send + 'static> Service for ArcServer<D> {
-    fn call<'a, 'k>(&'a self, req: Request<'a, 'k>, res: Response<'a>) {
-        let nickel_req = request::Request::from_internal(req,
-                                                         &self.0.shared_data);
 
-        let nickel_res = response::Response::from_internal(res,
-                                                           &self.0.templates,
-                                                           &self.0.shared_data);
 
-        self.0.middleware_stack.invoke(nickel_req, nickel_res);
+    type Request = Request;
+    type Response = Response;
+    type Error = hyper::Error;
+    type Future = FutureResult<Response, hyper::Error>;
+
+    fn call<'a, 'k>(&'a self, req: Request) -> Self::Future {
+        
+        let mut res = Response::new();
+
+        // {
+
+        //     let nickel_req = request::Request::from_internal(&req,
+        //                                                     &self.0.shared_data);
+        
+
+        //     let nickel_res = response::Response::from_internal(res,
+        //                                                     &self.0.templates,
+        //                                                     &self.0.shared_data);
+
+        //     self.0.middleware_stack.invoke(nickel_req, nickel_res);
+        
+        // }
+
+        futures::future::ok(res)
+    }
+}
+
+impl<D: Sync + Send + 'static> NewService for ArcServer<D> {
+
+    type Request = Request;
+    type Response = Response;
+    type Error = hyper::Error;
+    type Instance = ArcServer<D>;
+    
+    fn new_service(&self) -> Result<Self::Instance, std::io::Error> {
+        
+        let cl: ArcServer<D> = ArcServer(self.0.clone());
+        Ok(cl)
     }
 }
 
@@ -45,19 +84,21 @@ impl<D: Sync + Send + 'static> Server<D> {
                                    addr: A,
                                    keep_alive_timeout: Option<Duration>,
                                    thread_count: Option<usize>)
-                                    -> HttpResult<ListeningServer> {
+                                    -> Result<ListeningServer<D>, hyper::Error> {
         let arc = ArcServer(Arc::new(self));
 
-        let server = Http::new().bind(&addr, arc).unwrap();
+        let server = Http::new();
 
-        server.keep_alive(keep_alive_timeout);
+        // server.keep_alive(keep_alive);
+        
+        let addr2 = addr.to_socket_addrs().unwrap().next().unwrap();
+
+        server.bind(&addr2, arc)
 
         // let listening = match thread_count {
         //     Some(threads) => server.handle_threads(arc, threads),
         //     None => server.handle(arc),
         // };
-
-        ListeningServer::<D>(server)
     }
 
     //TODO: SSL
@@ -82,34 +123,34 @@ impl<D: Sync + Send + 'static> Server<D> {
     //     listening.map(ListeningServer)
     // }
 }
-use std::any::Any;
+
 /// A server listeing on a socket
-pub struct ListeningServer<D>(HyperServer<ArcServer<D>, Any>);
+pub type ListeningServer<D> = HyperServer<ArcServer<D>, Body>;
 
-impl ListeningServer<Any> {
-    /// Gets the `SocketAddr` which the server is currently listening on.
-    pub fn socket(&self) -> SocketAddr {
-        self.0.socket
-    }
+// impl ListeningServer<S> {
+//     /// Gets the `SocketAddr` which the server is currently listening on.
+//     pub fn socket(&self) -> SocketAddr {
+//         self.0.socket
+//     }
 
-    /// Detaches the server thread.
-    ///
-    /// This doesn't actually kill the server, it just stops the current thread from
-    /// blocking due to the server running. In the case where `main` returns due to
-    /// this unblocking, then the server will be killed due to process death.
-    ///
-    /// The required use of this is when writing unit tests which spawn servers and do
-    /// not want to block the test-runner by waiting on the server to stop because
-    /// it probably never will.
-    ///
-    /// See [this hyper issue](https://github.com/hyperium/hyper/issues/338) for more
-    /// information.
-    pub fn detach(self) {
-        // We want this handle to be dropped without joining.
-        let _ = ::std::thread::spawn(move || {
-            // This will hang the spawned thread.
-            // See: https://github.com/hyperium/hyper/issues/338
-            let _ = self.0;
-        });
-    }
-}
+//     /// Detaches the server thread.
+//     ///
+//     /// This doesn't actually kill the server, it just stops the current thread from
+//     /// blocking due to the server running. In the case where `main` returns due to
+//     /// this unblocking, then the server will be killed due to process death.
+//     ///
+//     /// The required use of this is when writing unit tests which spawn servers and do
+//     /// not want to block the test-runner by waiting on the server to stop because
+//     /// it probably never will.
+//     ///
+//     /// See [this hyper issue](https://github.com/hyperium/hyper/issues/338) for more
+//     /// information.
+//     pub fn detach(self) {
+//         // We want this handle to be dropped without joining.
+//         let _ = ::std::thread::spawn(move || {
+//             // This will hang the spawned thread.
+//             // See: https://github.com/hyperium/hyper/issues/338
+//             let _ = self.0;
+//         });
+//     }
+// }

@@ -10,6 +10,7 @@ extern crate url;
 extern crate mustache;
 extern crate groupable;
 extern crate modifier;
+extern crate futures;
 
 #[macro_use] extern crate log;
 #[macro_use] extern crate lazy_static;

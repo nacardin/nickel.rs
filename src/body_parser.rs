@@ -9,6 +9,7 @@ use std::fmt;
 use std::io::{self, ErrorKind, Read};
 use typemap::Key;
 use urlencoded::{self, Params};
+use futures::Stream;
 
 struct BodyReader;
 
@@ -16,13 +17,16 @@ impl Key for BodyReader {
     type Value = String;
 }
 
-impl<'mw, 'conn, D> Plugin<Request<'mw, 'conn, D>> for BodyReader {
+impl<'mw, D> Plugin<Request<'mw, D>> for BodyReader {
     type Error = io::Error;
 
     fn eval(req: &mut Request<D>) -> Result<String, io::Error> {
-        let mut buf = String::new();
-        try!(req.origin.read_to_string(&mut buf));
-        Ok(buf)
+        // let mut buf = String::new();
+        // let body = req.origin.body_ref().unwrap();
+        // let body_buffer = body.wait().fold(Vec::new(), |b, c| { b.extend(c.unwrap()); b });
+        // let body_str = String::from_utf8(body_buffer).unwrap();
+        // Ok(body_str)
+        Ok("fake eval".to_owned())
     }
 }
 
@@ -32,12 +36,12 @@ impl Key for FormBodyParser {
     type Value = Params;
 }
 
-impl<'mw, 'conn, D> Plugin<Request<'mw, 'conn, D>> for FormBodyParser {
+impl<'mw, D> Plugin<Request<'mw, D>> for FormBodyParser {
     type Error = BodyError;
 
     fn eval(req: &mut Request<D>) -> Result<Params, BodyError> {
-        match req.origin.headers.get::<ContentType>() {
-            Some(&ContentType(mime1)) => {
+        match req.origin.headers().get::<ContentType>() {
+            Some(&ContentType(ref mime1)) => {
                 if mime1.type_() == mime::APPLICATION && mime1.subtype() == mime::WWW_FORM_URLENCODED {
                     let body = try!(req.get_ref::<BodyReader>());
                     Ok(urlencoded::parse(&*body))
@@ -68,7 +72,7 @@ pub trait FormBody {
     fn form_body(&mut self) -> Result<&Params, (StatusCode, BodyError)>;
 }
 
-impl<'mw, 'conn, D> FormBody for Request<'mw, 'conn, D> {
+impl<'mw, D> FormBody for Request<'mw, D> {
     fn form_body(&mut self) -> Result<&Params, (StatusCode, BodyError)> {
         self.get_ref::<FormBodyParser>().map_err(|e| (StatusCode::BadRequest, e))
     }
@@ -78,7 +82,7 @@ pub trait JsonBody {
     fn json_as<T: Decodable>(&mut self) -> Result<T, io::Error>;
 }
 
-impl<'mw, 'conn, D> JsonBody for Request<'mw, 'conn, D> {
+impl<'mw, D> JsonBody for Request<'mw, D> {
     // FIXME: Update the error type.
     // Would be good to capture parsing error rather than a generic io::Error.
     // FIXME: Do the content-type check

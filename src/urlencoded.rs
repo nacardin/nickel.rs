@@ -34,7 +34,7 @@ pub fn parse(encoded_string : &str) -> Params {
 
 pub fn parse_uri(origin: &Uri) -> Params {
     
-    let result = *origin.query().map(|q| parse(&*q));
+    let result = origin.query().map(|q| parse(&*q));
 
     result.unwrap_or_else(|| Params(HashMap::new()))
 }

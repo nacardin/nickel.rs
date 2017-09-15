@@ -42,7 +42,7 @@ impl<'a, D> Redirect for Response<'a, D> {
     where T: Into<String> {
         self.set(header::Location::new(target.into()));
 
-        let code = status.to_u16();
+        let code = status.as_u16();
         if code < 300 || code >= 400 {
             self.error(StatusCode::InternalServerError, "redirect_with called with non-3xx status code")
         } else {

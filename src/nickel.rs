@@ -4,9 +4,10 @@ use std::env;
 use std::error::Error as StdError;
 use router::{Router, HttpRouter, Matcher};
 use middleware::{MiddlewareStack, Middleware, ErrorHandler};
-use server::{Server, ListeningServer};
+use server::{Server};
 use hyper::Method;
 use hyper::StatusCode;
+use hyper::server::{Server as HyperServer};
 
 //pre defined middleware
 use default_error_handler::DefaultErrorHandler;
@@ -26,6 +27,8 @@ use default_error_handler::DefaultErrorHandler;
 ///                      .output_on_listen(false)
 ///                      .thread_count(Some(8));
 /// ```
+use server::ListeningServer;
+
 pub struct Options {
     output_on_listen: bool,
     thread_count: Option<usize>,
@@ -203,7 +206,7 @@ impl<D: Sync + Send + 'static> Nickel<D> {
     /// # // unblock the server so the test doesn't block forever
     /// # listening.detach();
     /// ```
-    pub fn listen<T: ToSocketAddrs>(mut self, addr: T) -> Result<ListeningServer, Box<StdError>> {
+    pub fn listen<T: ToSocketAddrs>(mut self, addr: T) -> Result<ListeningServer<D>, Box<StdError>> {
         self.middleware_stack.add_middleware(middleware! {
             (StatusCode::NotFound, "File Not Found")
         });
@@ -225,7 +228,7 @@ impl<D: Sync + Send + 'static> Nickel<D> {
         };
 
         if self.options.output_on_listen {
-            println!("Listening on http://{}", listener.socket());
+            println!("Listening on http://{}", listener.local_addr().unwrap());
             println!("Ctrl-C to shutdown server");
         }
 
@@ -276,7 +279,7 @@ impl<D: Sync + Send + 'static> Nickel<D> {
     // /// # fn main() {}
     // /// ```
     // pub fn listen_https<T,S>(mut self, addr: T, ssl: S) -> Result<ListeningServer, Box<StdError>>
-    // where T: ToSocketAddrs,
+    // where T: ToSocketAddrs,HttpResult
     //       S: SslServer + Send + Clone + 'static {
     //     self.middleware_stack.add_middleware(middleware! {
     //         (StatusCode::NotFound, "File Not Found")

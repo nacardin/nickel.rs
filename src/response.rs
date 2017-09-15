@@ -29,7 +29,8 @@ pub type TemplateCache = RwLock<HashMap<String, Template>>;
 ///A container for the response
 pub struct Response<'a, D: 'a = (), T: 'static + Any = Body> {
     ///the original `hyper::server::Response`
-    origin: HyperResponse<'a, T>,
+    origin: HyperResponse<T>,
+    body_buffer: Vec<u8>,
     templates: &'a TemplateCache,
     data: &'a D,
     map: TypeMap,
@@ -38,12 +39,13 @@ pub struct Response<'a, D: 'a = (), T: 'static + Any = Body> {
 }
 
 impl<'a, D> Response<'a, D, Body> {
-    pub fn from_internal<'c, 'd>(response: HyperResponse<'c, Body>,
+    pub fn from_internal<'c, 'd>(response: HyperResponse<Body>,
                                  templates: &'c TemplateCache,
                                  data: &'c D)
                                 -> Response<'c, D, Body> {
         Response {
             origin: response,
+            body_buffer: Vec::new(),
             templates: templates,
             data: data,
             map: TypeMap::new(),
@@ -52,8 +54,8 @@ impl<'a, D> Response<'a, D, Body> {
     }
 
     /// Get a mutable reference to the status.
-    pub fn status_mut(&mut self) -> &mut StatusCode {
-        self.origin.status_mut()
+    pub fn set_status(&mut self, status_code: StatusCode) {
+        self.origin.set_status(status_code)
     }
 
     /// Get a mutable reference to the Headers.
@@ -152,7 +154,8 @@ impl<'a, D> Response<'a, D, Body> {
     //
     // Also, it should only set them if not already set.
     fn set_fallback_headers(&mut self) {
-        self.set_header_fallback(|| Date(HttpDate::from(time::now_utc())));
+        use std::time::SystemTime;
+        self.set_header_fallback(|| Date(HttpDate::from(SystemTime::now())));
         self.set_header_fallback(|| Server::new("Nickel"));
         self.set_header_fallback(|| ContentType(MediaType::Html.into()));
     }
@@ -261,22 +264,7 @@ impl<'a, D> Response<'a, D, Body> {
         // on_send then it would possibly set redundant things.
         self.set_fallback_headers();
 
-        let Response { origin, templates, data, map, on_send } = self;
-        match origin.start() {
-            Ok(origin) => {
-                Ok(Response {
-                    origin: origin,
-                    templates: templates,
-                    data: data,
-                    map: map,
-                    on_send: on_send
-                })
-            },
-            Err(e) =>
-                unsafe {
-                    Err(NickelError::without_response(format!("Failed to start response: {}", e)))
-                }
-        }
+        Ok(self)
     }
 
     pub fn server_data(&self) -> &'a D {
@@ -300,12 +288,12 @@ impl<'a, D> Response<'a, D, Body> {
 impl<'a, 'b, D> Write for Response<'a, D, Body> {
     #[inline(always)]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.origin.write(buf)
+        self.body_buffer.write(buf)
     }
 
     #[inline(always)]
     fn flush(&mut self) -> io::Result<()> {
-        self.origin.flush()
+        self.body_buffer.flush()
     }
 }
 
@@ -321,8 +309,9 @@ impl<'a, 'b, D> Response<'a, D, Body> {
     }
 
     /// Flushes all writing of a response to the client.
-    pub fn end(self) -> io::Result<()> {
-        self.origin.end()
+    pub fn end(mut self) -> io::Result<()> {
+        self.origin.set_body(self.body_buffer);
+        Ok(())
     }
 }
 
@@ -377,7 +366,7 @@ mod modifier_impls {
 
     impl<'a, D> Modifier<Response<'a, D>> for StatusCode {
         fn modify(self, res: &mut Response<'a, D>) {
-            *res.status_mut() = self
+            res.set_status(self)
         }
     }
 
