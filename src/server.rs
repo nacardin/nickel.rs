@@ -16,6 +16,7 @@ use std::time::Duration;
 
 use hyper;
 use hyper::Body;
+use tokio_core::reactor::Handle;
 
 pub struct Server<D> {
     middleware_stack: MiddlewareStack<D>,
@@ -38,6 +39,7 @@ impl<D: Sync + Send + 'static> Service for ArcServer<D> {
     fn call<'a, 'k>(&'a self, req: Request) -> Self::Future {
         
         let mut res = Response::new();
+
 
         // {
 
@@ -82,23 +84,34 @@ impl<D: Sync + Send + 'static> Server<D> {
 
     pub fn serve<A: ToSocketAddrs>(self,
                                    addr: A,
-                                   keep_alive_timeout: Option<Duration>,
-                                   thread_count: Option<usize>)
-                                    -> Result<ListeningServer<D>, hyper::Error> {
+                                   keep_alive: bool,
+                                   shutdown_timeout: Option<Duration>)
+                                    -> Result<ListeningServer, hyper::Error> {
         let arc = ArcServer(Arc::new(self));
 
-        let server = Http::new();
+        let mut http = Http::new();
 
-        // server.keep_alive(keep_alive);
+        http.keep_alive(keep_alive);
         
         let addr2 = addr.to_socket_addrs().unwrap().next().unwrap();
 
-        server.bind(&addr2, arc)
-
-        // let listening = match thread_count {
-        //     Some(threads) => server.handle_threads(arc, threads),
-        //     None => server.handle(arc),
-        // };
+        match http.bind(&addr2, arc) {
+            Ok(mut server) => {
+                let local_addr = server.local_addr();
+                if shutdown_timeout.is_some() {
+                    server.shutdown_timeout(shutdown_timeout.unwrap());
+                }
+                let listening_server = ListeningServer {
+                    local_addr: local_addr.unwrap(),
+                    handle: server.handle()
+                };
+                server.run().unwrap();
+                Ok(listening_server)
+            },
+            Err(err) => {
+                Err(err)
+            }
+        }
     }
 
     //TODO: SSL
@@ -124,33 +137,8 @@ impl<D: Sync + Send + 'static> Server<D> {
     // }
 }
 
-/// A server listeing on a socket
-pub type ListeningServer<D> = HyperServer<ArcServer<D>, Body>;
-
-// impl ListeningServer<S> {
-//     /// Gets the `SocketAddr` which the server is currently listening on.
-//     pub fn socket(&self) -> SocketAddr {
-//         self.0.socket
-//     }
-
-//     /// Detaches the server thread.
-//     ///
-//     /// This doesn't actually kill the server, it just stops the current thread from
-//     /// blocking due to the server running. In the case where `main` returns due to
-//     /// this unblocking, then the server will be killed due to process death.
-//     ///
-//     /// The required use of this is when writing unit tests which spawn servers and do
-//     /// not want to block the test-runner by waiting on the server to stop because
-//     /// it probably never will.
-//     ///
-//     /// See [this hyper issue](https://github.com/hyperium/hyper/issues/338) for more
-//     /// information.
-//     pub fn detach(self) {
-//         // We want this handle to be dropped without joining.
-//         let _ = ::std::thread::spawn(move || {
-//             // This will hang the spawned thread.
-//             // See: https://github.com/hyperium/hyper/issues/338
-//             let _ = self.0;
-//         });
-//     }
-// }
+/// A server listening on a socket
+pub struct ListeningServer {
+    pub local_addr: SocketAddr,
+    pub handle: Handle
+}

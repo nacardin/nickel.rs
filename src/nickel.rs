@@ -31,7 +31,7 @@ use server::ListeningServer;
 
 pub struct Options {
     output_on_listen: bool,
-    thread_count: Option<usize>,
+    shutdown_timeout: Option<Duration>,
 }
 
 impl Options {
@@ -47,8 +47,8 @@ impl Options {
     /// `hyper`'s default of `1.25 * core_count`.
     ///
     /// Defaults to `None`.
-    pub fn thread_count(mut self, thread_count: Option<usize>) -> Self {
-        self.thread_count = thread_count;
+    pub fn shutdown_timeout(mut self, shutdown_timeout: Option<Duration>) -> Self {
+        self.shutdown_timeout = shutdown_timeout;
         self
     }
 }
@@ -57,7 +57,7 @@ impl Default for Options {
     fn default() -> Self {
         Options {
             output_on_listen: true,
-            thread_count: None,
+            shutdown_timeout: None,
         }
     }
 }
@@ -67,7 +67,7 @@ impl Default for Options {
 pub struct Nickel<D: Sync + Send + 'static = ()> {
     middleware_stack: MiddlewareStack<D>,
     data: D,
-    keep_alive_timeout: Option<Duration>,
+    keep_alive: bool,
 
     /// Configuration options for the server.
     pub options: Options,
@@ -103,8 +103,7 @@ impl<D: Sync + Send + 'static> Nickel<D> {
             middleware_stack: middleware_stack,
             options: Options::default(),
             data: data,
-            // Default value from nginx
-            keep_alive_timeout: Some(Duration::from_secs(75))
+            keep_alive: true
         }
     }
 
@@ -206,7 +205,7 @@ impl<D: Sync + Send + 'static> Nickel<D> {
     /// # // unblock the server so the test doesn't block forever
     /// # listening.detach();
     /// ```
-    pub fn listen<T: ToSocketAddrs>(mut self, addr: T) -> Result<ListeningServer<D>, Box<StdError>> {
+    pub fn listen<T: ToSocketAddrs>(mut self, addr: T) -> Result<ListeningServer, Box<StdError>> {
         self.middleware_stack.add_middleware(middleware! {
             (StatusCode::NotFound, "File Not Found")
         });
@@ -219,16 +218,16 @@ impl<D: Sync + Send + 'static> Nickel<D> {
             // If we're under a test harness, we'll pass zero to get assigned a random
             // port. See http://doc.rust-lang.org/std/net/struct.TcpListener.html#method.bind
             try!(server.serve("localhost:0",
-                              self.keep_alive_timeout,
-                              self.options.thread_count))
+                              self.keep_alive,
+                              self.options.shutdown_timeout))
         } else {
             try!(server.serve(addr,
-                              self.keep_alive_timeout,
-                              self.options.thread_count))
+                              self.keep_alive,
+                              self.options.shutdown_timeout))
         };
 
         if self.options.output_on_listen {
-            println!("Listening on http://{}", listener.local_addr().unwrap());
+            println!("Listening on http://{}", listener.local_addr);
             println!("Ctrl-C to shutdown server");
         }
 
@@ -248,8 +247,8 @@ impl<D: Sync + Send + 'static> Nickel<D> {
     /// # Default
     ///
     /// The default value is 75 seconds.
-    pub fn keep_alive_timeout(&mut self, timeout: Option<Duration>){
-        self.keep_alive_timeout = timeout;
+    pub fn keep_alive(&mut self, keep_alive: bool){
+        self.keep_alive = keep_alive;
     }
 
     // /// Bind and listen for connections on the given host and port.

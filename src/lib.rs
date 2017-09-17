@@ -11,6 +11,7 @@ extern crate mustache;
 extern crate groupable;
 extern crate modifier;
 extern crate futures;
+extern crate tokio_core;
 
 #[macro_use] extern crate log;
 #[macro_use] extern crate lazy_static;
