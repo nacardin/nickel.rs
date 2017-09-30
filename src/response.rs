@@ -29,7 +29,7 @@ pub type TemplateCache = RwLock<HashMap<String, Template>>;
 ///A container for the response
 pub struct Response<'a, D: 'a = ()> {
     ///the original `hyper::server::Response`
-    origin: &'a HyperResponse<Body>,
+    origin: &'a mut HyperResponse<Body>,
     body_buffer: Vec<u8>,
     templates: &'a TemplateCache,
     data: &'a D,
@@ -39,7 +39,7 @@ pub struct Response<'a, D: 'a = ()> {
 }
 
 impl<'a, D> Response<'a, D> {
-    pub fn from_internal<'c, 'd>(response: &'d HyperResponse<Body>,
+    pub fn from_internal<'c, 'd>(response: &'c mut HyperResponse<Body>,
                                  templates: &'c TemplateCache,
                                  data: &'c D)
                                 -> Response<'c, D> {
