@@ -38,22 +38,17 @@ impl<D: Sync + Send + 'static> Service for ArcServer<D> {
 
     fn call<'a, 'k>(&'a self, req: Request) -> Self::Future {
         
-        let mut res = Response::new();
+        let res = Response::new();
 
+        let nickel_req = request::Request::from_internal(&req,
+                                                        &self.0.shared_data);
+    
 
-        // {
+        let nickel_res = response::Response::from_internal(&mut res,
+                                                        &self.0.templates,
+                                                        &self.0.shared_data);
 
-        //     let nickel_req = request::Request::from_internal(&req,
-        //                                                     &self.0.shared_data);
-        
-
-        //     let nickel_res = response::Response::from_internal(res,
-        //                                                     &self.0.templates,
-        //                                                     &self.0.shared_data);
-
-        //     self.0.middleware_stack.invoke(nickel_req, nickel_res);
-        
-        // }
+        self.0.middleware_stack.invoke(nickel_req, nickel_res);
 
         futures::future::ok(res)
     }

@@ -27,22 +27,22 @@ use typemap::TypeMap;
 pub type TemplateCache = RwLock<HashMap<String, Template>>;
 
 ///A container for the response
-pub struct Response<'a, D: 'a = (), T: 'static + Any = Body> {
+pub struct Response<'a, D: 'a = ()> {
     ///the original `hyper::server::Response`
-    origin: HyperResponse<T>,
+    origin: &'a HyperResponse<Body>,
     body_buffer: Vec<u8>,
     templates: &'a TemplateCache,
     data: &'a D,
     map: TypeMap,
     // This should be FnBox, but that's currently unstable
-    on_send: Vec<Box<FnMut(&mut Response<'a, D, Body>)>>
+    on_send: Vec<Box<FnMut(&mut Response<'a, D>)>>
 }
 
-impl<'a, D> Response<'a, D, Body> {
-    pub fn from_internal<'c, 'd>(response: HyperResponse<Body>,
+impl<'a, D> Response<'a, D> {
+    pub fn from_internal<'c, 'd>(response: &'d HyperResponse<Body>,
                                  templates: &'c TemplateCache,
                                  data: &'c D)
-                                -> Response<'c, D, Body> {
+                                -> Response<'c, D> {
         Response {
             origin: response,
             body_buffer: Vec::new(),
@@ -253,7 +253,7 @@ impl<'a, D> Response<'a, D, Body> {
         render(self, template, data)
     }
 
-    pub fn start(mut self) -> Result<Response<'a, D, Body>, NickelError<'a, D>> {
+    pub fn start(mut self) -> Result<Response<'a, D>, NickelError<'a, D>> {
         let on_send = mem::replace(&mut self.on_send, vec![]);
         for mut f in on_send.into_iter().rev() {
             // TODO: Ensure `f` doesn't call on_send again
@@ -272,7 +272,7 @@ impl<'a, D> Response<'a, D, Body> {
     }
 
     pub fn on_send<F>(&mut self, f: F)
-            where F: FnMut(&mut Response<'a, D, Body>) + 'static {
+            where F: FnMut(&mut Response<'a, D>) + 'static {
         self.on_send.push(Box::new(f))
     }
 
@@ -285,7 +285,7 @@ impl<'a, D> Response<'a, D, Body> {
     }
 }
 
-impl<'a, 'b, D> Write for Response<'a, D, Body> {
+impl<'a, 'b, D> Write for Response<'a, D> {
     #[inline(always)]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.body_buffer.write(buf)
@@ -297,7 +297,7 @@ impl<'a, 'b, D> Write for Response<'a, D, Body> {
     }
 }
 
-impl<'a, 'b, D> Response<'a, D, Body> {
+impl<'a, 'b, D> Response<'a, D> {
     /// In the case of an unrecoverable error while a stream is already in
     /// progress, there is no standard way to signal to the client that an
     /// error has occurred. `bail` will drop the connection and log an error
@@ -315,7 +315,7 @@ impl<'a, 'b, D> Response<'a, D, Body> {
     }
 }
 
-impl <'a, D, T: 'static + Any> Response<'a, D, T> {
+impl <'a, D> Response<'a, D> {
     /// The status of this response.
     pub fn status(&self) -> StatusCode {
         self.origin.status()
@@ -331,7 +331,7 @@ impl <'a, D, T: 'static + Any> Response<'a, D, T> {
     }
 }
 
-impl<'a, D, T: 'static + Any> Extensible for Response<'a, D, T> {
+impl<'a, D> Extensible for Response<'a, D> {
     fn extensions(&self) -> &TypeMap {
         &self.map
     }
@@ -341,7 +341,7 @@ impl<'a, D, T: 'static + Any> Extensible for Response<'a, D, T> {
     }
 }
 
-impl<'a, D, T: 'static + Any> Pluggable for Response<'a, D, T> {}
+impl<'a, D> Pluggable for Response<'a, D> {}
 
 fn mime_from_filename<P: AsRef<Path>>(path: P) -> Option<MediaType> {
     path.as_ref()
