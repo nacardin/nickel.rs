@@ -4,12 +4,14 @@ use serialize::{Decodable, json};
 use request::Request;
 use plugin::{Plugin, Pluggable};
 use hyper::StatusCode;
+use hyper::Body;
 use std::error::Error as StdError;
 use std::fmt;
 use std::io::{self, ErrorKind, Read};
 use typemap::Key;
 use urlencoded::{self, Params};
 use futures::Stream;
+use futures::Future;
 
 struct BodyReader;
 
@@ -21,12 +23,15 @@ impl<'mw, D> Plugin<Request<'mw, D>> for BodyReader {
     type Error = io::Error;
 
     fn eval(req: &mut Request<D>) -> Result<String, io::Error> {
-        // let mut buf = String::new();
-        // let body = req.origin.body_ref().unwrap();
-        // let body_buffer = body.wait().fold(Vec::new(), |b, c| { b.extend(c.unwrap()); b });
-        // let body_str = String::from_utf8(body_buffer).unwrap();
-        // Ok(body_str)
-        Ok("fake eval".to_owned())
+    
+        match req.body() {
+            Some(body) => {
+                let bstr = String::from_utf8(body).unwrap();
+                println!("bodp {:?}", bstr);
+                Ok(bstr)
+            },
+            None => Ok("nobod".to_owned())
+        }
     }
 }
 
@@ -40,17 +45,18 @@ impl<'mw, D> Plugin<Request<'mw, D>> for FormBodyParser {
     type Error = BodyError;
 
     fn eval(req: &mut Request<D>) -> Result<Params, BodyError> {
-        match req.origin.headers().get::<ContentType>() {
-            Some(&ContentType(ref mime1)) => {
-                if mime1.type_() == mime::APPLICATION && mime1.subtype() == mime::WWW_FORM_URLENCODED {
-                    let body = try!(req.get_ref::<BodyReader>());
-                    Ok(urlencoded::parse(&*body))
-                } else {
-                    Err(BodyError::WrongContentType)
-                }
-            }
-            _ => Err(BodyError::WrongContentType),
-        }
+        // match req.origin_ref().headers().get::<ContentType>() {
+        //     Some(&ContentType(ref mime1)) => {
+        //         if mime1.type_() == mime::APPLICATION && mime1.subtype() == mime::WWW_FORM_URLENCODED {
+        //             let body = try!(req.get_ref::<BodyReader>());
+        //             Ok(urlencoded::parse(&*body))
+        //         } else {
+        //             Err(BodyError::WrongContentType)
+        //         }
+        //     }
+        //     _ => Err(BodyError::WrongContentType),
+        // }
+        Err(BodyError::WrongContentType)
     }
 }
 
@@ -88,6 +94,7 @@ impl<'mw, D> JsonBody for Request<'mw, D> {
     // FIXME: Do the content-type check
     fn json_as<T: Decodable>(&mut self) -> Result<T, io::Error> {
         self.get_ref::<BodyReader>().and_then(|body| {
+            println!("{:?}", body);
             json::decode::<T>(&*body)
                 .map_err(|err| io::Error::new(ErrorKind::Other, format!("Parse error: {}", err)))
         })

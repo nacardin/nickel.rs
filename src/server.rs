@@ -11,12 +11,14 @@ use response;
 
 use futures;
 use futures::future::FutureResult;
+use futures::IntoFuture;
 
 use std::time::Duration;
 
 use hyper;
 use hyper::Body;
 use tokio_core::reactor::Handle;
+use futures::Future;
 
 pub struct Server<D> {
     middleware_stack: MiddlewareStack<D>,
@@ -34,25 +36,35 @@ impl<D: Sync + Send + 'static> Service for ArcServer<D> {
     type Request = Request;
     type Response = Response;
     type Error = hyper::Error;
-    type Future = FutureResult<Response, hyper::Error>;
+    type Future = Box<Future<Item=hyper::Response, Error=hyper::Error>>;
 
     fn call<'a, 'k>(&'a self, req: Request) -> Self::Future {
         
-        let mut res = Response::new();
+        let i = self.0.clone();
 
-        {
-        let nickel_req = request::Request::from_internal(&req,
-                                                        &self.0.shared_data);
-    
+        Box::new(request::RequestOrigin::from_internal(req).and_then(move |req_origin| {
 
-        let nickel_res = response::Response::from_internal(&mut res,
-                                                        &self.0.templates,
-                                                        &self.0.shared_data);
+            let mut res = hyper::Response::new();
+            
+            {
+                let nickel_req = request::Request::from_internal(&req_origin,
+                                                                &i.shared_data);
+            
 
-        self.0.middleware_stack.invoke(nickel_req, nickel_res);
-        }
+                let nickel_res = response::Response::from_internal(&mut res,
+                                                                &i.templates,
+                                                                &i.shared_data);
 
-        futures::future::ok(res)
+                i.middleware_stack.invoke(nickel_req, nickel_res);
+            }
+
+            futures::future::ok(res)
+
+        }))
+
+        // Box::new(futures::future::ok(hyper::Response::new()))
+
+
     }
 }
 

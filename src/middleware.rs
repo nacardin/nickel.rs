@@ -58,9 +58,9 @@ impl<D: 'static> MiddlewareStack<D> {
             match handler.invoke(&mut req, res) {
                 Ok(Halt(res)) => {
                     debug!("Halted {:?} {:?} {:?} {:?}",
-                           req.origin.method(),
-                           req.origin.remote_addr(),
-                           req.origin.uri(),
+                           req.origin.method,
+                           req.origin.remote_addr,
+                           req.origin.uri,
                            res.status());
                     let _ = res.end();
                     return
@@ -68,9 +68,9 @@ impl<D: 'static> MiddlewareStack<D> {
                 Ok(Continue(fresh)) => res = fresh,
                 Err(mut err) => {
                     warn!("{:?} {:?} {:?} {:?} {:?}",
-                          req.origin.method(),
-                          req.origin.remote_addr(),
-                          req.origin.uri(),
+                          req.origin.method,
+                          req.origin.remote_addr,
+                          req.origin.uri,
                           err.message,
                           err.stream.as_ref().map(|s| s.status()));
 
@@ -82,9 +82,9 @@ impl<D: 'static> MiddlewareStack<D> {
                     }
 
                     warn!("Unhandled error: {:?} {:?} {:?} {:?} {:?}",
-                          req.origin.method(),
-                          req.origin.remote_addr(),
-                          req.origin.uri(),
+                          req.origin.method,
+                          req.origin.remote_addr,
+                          req.origin.uri,
                           err.message,
                           err.stream.map(|s| s.status()));
                     return

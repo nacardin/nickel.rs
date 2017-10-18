@@ -53,11 +53,11 @@ impl FaviconHandler {
 
     #[inline]
     pub fn is_favicon_request<D>(req: &Request<D>) -> bool {
-        req.origin.path() == "/favicon.ico"
+        req.origin.path == "/favicon.ico"
     }
 
     pub fn handle_request<'a, D>(&self, req: &Request<D>, mut res: Response<'a, D>) -> MiddlewareResult<'a, D> {
-        match *req.origin.method() {
+        match req.origin.method {
             Get => {
                 self.send_favicon(req, res)
             },
@@ -78,7 +78,7 @@ impl FaviconHandler {
     }
 
     pub fn send_favicon<'a, D>(&self, req: &Request<D>, mut res: Response<'a, D>) -> MiddlewareResult<'a, D> {
-        debug!("{:?} {:?}", req.origin.method(), self.icon_path.display());
+        debug!("{:?} {:?}", req.origin.method, self.icon_path.display());
         res.set(MediaType::Ico);
         res.send(&*self.icon)
     }

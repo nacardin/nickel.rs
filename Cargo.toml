@@ -27,12 +27,9 @@ groupable = "0.2"
 mustache = "0.8"
 lazy_static = "0.2"
 modifier = "0.1"
-futures = "0.1.14"
+futures = "0.1.15"
 tokio-core = "0.1.9"
-
-[dependencies.hyper]
-version = "~0.11.2"
-default-features = false
+hyper = "0.11.6"
 
 [dependencies.compiletest_rs]
 version = "0.2"
