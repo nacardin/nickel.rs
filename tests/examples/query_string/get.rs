@@ -12,14 +12,14 @@ fn assert_accepted(query: &str) {
     with_query(query, |res| {
         let s = read_body_to_string(res);
 
-        assert_eq!(res.status, StatusCode::Ok);
+        assert_eq!(res.status(), StatusCode::Ok);
         assert_eq!(s, "Congratulations on conforming!");
     })
 }
 
 fn assert_rejected(query: &str) {
     with_query(query, |res| {
-        assert_eq!(res.status, StatusCode::BadRequest)
+        assert_eq!(res.status(), StatusCode::BadRequest)
     })
 }
 

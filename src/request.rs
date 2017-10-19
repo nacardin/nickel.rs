@@ -3,16 +3,9 @@ use plugin::{Extensible, Pluggable};
 use typemap::TypeMap;
 use hyper::Request as HyperRequest;
 use hyper::Uri;
-use hyper::Body;
-use hyper::Chunk;
 use hyper;
-use futures;
-use futures::stream::Concat2;
-use futures::Map;
 use futures::{Stream, Future};
-use futures::stream::StreamFuture;
 use std::net::SocketAddr;
-use std::io;
 
 #[derive(Debug)]
 pub struct RequestOrigin {

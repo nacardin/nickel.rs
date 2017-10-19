@@ -10,7 +10,7 @@ fn logger_fn<'mw>(req: &mut Request, res: Response<'mw>) -> MiddlewareResult<'mw
 struct Logger;
 
 impl<D> Middleware<D> for Logger {
-    fn invoke<'mw, 'conn>(&self, req: &mut Request<'mw, 'conn, D>, res: Response<'mw, D>)
+    fn invoke<'mw>(&self, req: &mut Request<'mw, D>, res: Response<'mw, D>)
     -> MiddlewareResult<'mw, D> {
         println!("logging request from logger middleware: {:?}", req.origin.uri);
         res.next_middleware()

@@ -3,8 +3,6 @@ use request::Request;
 use response::Response;
 use middleware::{Continue, Middleware, MiddlewareResult};
 
-use std::mem;
-
 pub trait Mountable<D> {
     fn mount<S: Into<String>, M: Middleware<D>>(&mut self, mount_point: S, middleware: M);
 }

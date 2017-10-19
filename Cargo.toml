@@ -30,6 +30,7 @@ modifier = "0.1"
 futures = "0.1.15"
 tokio-core = "0.1.9"
 hyper = "0.11.6"
+unicase = "2.0.0"
 
 [dependencies.compiletest_rs]
 version = "0.2"

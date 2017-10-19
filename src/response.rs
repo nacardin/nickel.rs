@@ -12,13 +12,11 @@ use hyper::header::{
 };
 
 use hyper::Body;
-use time;
 use mimes::MediaType;
 use mustache;
 use mustache::Template;
-use std::io::{self, Read, Write, copy};
+use std::io::{self, Write, copy};
 use std::fs::File;
-use std::any::Any;
 use {NickelError, Halt, MiddlewareResult, Responder, Action};
 use modifier::Modifier;
 use plugin::{Extensible, Pluggable};
@@ -309,7 +307,7 @@ impl<'a, 'b, D> Response<'a, D> {
     }
 
     /// Flushes all writing of a response to the client.
-    pub fn end(mut self) -> io::Result<()> {
+    pub fn end(self) -> io::Result<()> {
         self.origin.set_body(self.body_buffer);
         Ok(())
     }

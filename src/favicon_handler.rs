@@ -2,7 +2,6 @@ use std::fs::File;
 use std::path::{PathBuf, Path};
 use std::io::Read;
 
-use hyper::Uri;
 use hyper::Method::{Get, Head, Options};
 use hyper::StatusCode;
 use hyper::header;

@@ -2,28 +2,24 @@ use std::net::{SocketAddr, ToSocketAddrs};
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 use std;
-use hyper::Result as HttpResult;
-use hyper::server::{Http, Service, NewService, Request, Response, Server as HyperServer};
+use hyper::server::{Http, Service, NewService, Request, Response};
 
 use middleware::MiddlewareStack;
 use request;
 use response;
 
 use futures;
-use futures::future::FutureResult;
-use futures::IntoFuture;
+use futures::Future;
 
 use std::time::Duration;
 
 use hyper;
-use hyper::Body;
 use tokio_core::reactor::Handle;
-use futures::Future;
 
 pub struct Server<D> {
     middleware_stack: MiddlewareStack<D>,
     templates: response::TemplateCache,
-    shared_data: D,
+    shared_data: D
 }
 
 
@@ -96,6 +92,7 @@ impl<D: Sync + Send + 'static> Server<D> {
                                    keep_alive: bool,
                                    shutdown_timeout: Option<Duration>)
                                     -> Result<ListeningServer, hyper::Error> {
+
         let arc = ArcServer(Arc::new(self));
 
         let mut http = Http::new();
@@ -121,6 +118,7 @@ impl<D: Sync + Send + 'static> Server<D> {
                 Err(err)
             }
         }
+
     }
 
     //TODO: SSL
@@ -150,4 +148,11 @@ impl<D: Sync + Send + 'static> Server<D> {
 pub struct ListeningServer {
     pub local_addr: SocketAddr,
     pub handle: Handle
+}
+
+impl ListeningServer {
+        pub fn socket(&self) -> SocketAddr {
+            self.local_addr.clone()
+        }
+        pub fn detach(self) {}
 }

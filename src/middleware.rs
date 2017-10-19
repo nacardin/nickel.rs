@@ -2,8 +2,6 @@ use request::Request;
 use response::Response;
 use nickel_error::NickelError;
 
-use hyper::Body;
-
 pub use self::Action::{Continue, Halt};
 
 pub type MiddlewareResult<'mw, D= ()> = Result<Action<Response<'mw, D>,

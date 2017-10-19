@@ -6,7 +6,7 @@ use hyper::client::Response;
 fn with_path<F>(path: &str, f: F) where F: FnOnce(&mut Response) {
     run_example("mount", |port| {
         let url = format!("http://localhost:{}{}", port, path);
-        let ref mut res = response_for(&url);
+        let mut res = response_for(&url);
         f(res)
     })
 }
@@ -22,14 +22,14 @@ fn trims_the_prefix() {
 #[test]
 fn ignores_unmatched_prefixes() {
     with_path("/this_isnt_matched/foo", |res| {
-        assert_eq!(res.status, StatusCode::NotFound);
+        assert_eq!(res.status(), StatusCode::NotFound);
     })
 }
 
 #[test]
 fn works_with_another_middleware() {
     with_path("/static/files/thoughtram_logo_brain.png", |res| {
-        assert_eq!(res.status, StatusCode::Ok);
+        assert_eq!(res.status(), StatusCode::Ok);
     });
 
     with_path("/static/files/nested/foo.js", |res| {

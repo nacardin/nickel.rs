@@ -7,7 +7,6 @@ use middleware::{MiddlewareStack, Middleware, ErrorHandler};
 use server::{Server};
 use hyper::Method;
 use hyper::StatusCode;
-use hyper::server::{Server as HyperServer};
 
 //pre defined middleware
 use default_error_handler::DefaultErrorHandler;

@@ -1,5 +1,10 @@
 use hyper::client::{Client, Response};
-use hyper::method::Method;
+use hyper::Method;
+use hyper::Request;
+use hyper::Uri;
+use std::str::FromStr;
+use futures::future::Future;
+use futures::Stream;
 
 use std::collections::HashSet;
 use std::process::{Child, Command, Stdio};
@@ -7,6 +12,8 @@ use std::thread;
 use std::io::{BufReader, BufRead, Read};
 use std::sync::Mutex;
 use std::env;
+
+use tokio_core::reactor::Core;
 
 struct Bomb(Child);
 
@@ -29,33 +36,42 @@ impl Drop for Bomb {
 }
 
 pub fn response_for_post(url: &str, body: &str) -> Response {
-    Client::new()
-           .post(url)
-           .body(body)
-           .send()
-           .unwrap()
+    let mut core = Core::new().unwrap();
+
+    let mut request = Request::new(Method::Post, Uri::from_str(url).unwrap());
+    request.set_body(body.to_owned());
+
+    Client::new(&core.handle())
+        .request(request)
+        .wait()
+        .unwrap()
 }
 
 pub fn response_for_method(method: Method, url: &str) -> Response {
-    Client::new()
-           .request(method, url)
-           .send()
-           .unwrap()
+    let mut core = Core::new().unwrap();
+
+    let request = Request::new(method, Uri::from_str(url).unwrap());
+
+    Client::new(&core.handle())
+        .request(request)
+        .wait()
+        .unwrap()
 }
 
 pub fn response_for(url: &str) -> Response {
     response_for_method(Method::Get, url)
 }
 
-pub fn read_body_to_string(res: &mut Response) -> String {
-    let mut s = String::new();
-    res.read_to_string(&mut s).unwrap();
-    s
+pub fn read_body_to_string(res: Response) -> String {
+
+    let chunk = res.body().concat2().wait().unwrap();
+
+    String::from_utf8(chunk.to_vec()).unwrap()
 }
 
 pub fn read_url(url: &str) -> String {
     let mut res = response_for(url);
-    read_body_to_string(&mut res)
+    read_body_to_string(res)
 }
 
 pub fn run_example<F>(name: &str, f: F)

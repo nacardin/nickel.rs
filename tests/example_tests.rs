@@ -9,6 +9,10 @@ extern crate nickel;
 
 #[macro_use] extern crate lazy_static;
 
+extern crate unicase;
+extern crate tokio_core;
+extern crate futures;
+
 mod util;
 
 mod examples {

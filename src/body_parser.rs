@@ -1,17 +1,12 @@
-use hyper::header::ContentType;
-use hyper::mime;
 use serialize::{Decodable, json};
 use request::Request;
 use plugin::{Plugin, Pluggable};
 use hyper::StatusCode;
-use hyper::Body;
 use std::error::Error as StdError;
 use std::fmt;
-use std::io::{self, ErrorKind, Read};
+use std::io::{self, ErrorKind};
 use typemap::Key;
-use urlencoded::{self, Params};
-use futures::Stream;
-use futures::Future;
+use urlencoded::Params;
 
 struct BodyReader;
 
