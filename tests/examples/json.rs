@@ -2,7 +2,7 @@ use util::*;
 
 use hyper::client::Response;
 
-fn with_path<F>(path: &str, f: F) where F: FnOnce(&mut Response) {
+fn with_path<F>(path: &str, f: F) where F: FnOnce(Response) {
     run_example("json", |port| {
         let url = format!("http://localhost:{}{}", port, path);
         let mut res = response_for(&url);
@@ -16,7 +16,7 @@ mod incoming {
     use hyper::StatusCode;
     use hyper::client::Response;
 
-    fn send_body<F>(body: &str, f: F) where F: FnOnce(&mut Response) {
+    fn send_body<F>(body: &str, f: F) where F: FnOnce(Response) {
         run_example("json", |port| {
             let url = format!("http://localhost:{}", port);
             let mut res = response_for_post(&url, body);

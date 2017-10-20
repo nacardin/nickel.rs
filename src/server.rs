@@ -2,6 +2,8 @@ use std::net::{SocketAddr, ToSocketAddrs};
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 use std;
+use std::thread;
+
 use hyper::server::{Http, Service, NewService, Request, Response};
 
 use middleware::MiddlewareStack;
@@ -15,6 +17,7 @@ use std::time::Duration;
 
 use hyper;
 use tokio_core::reactor::Handle;
+use futures::sync::oneshot;
 
 pub struct Server<D> {
     middleware_stack: MiddlewareStack<D>,
@@ -95,30 +98,36 @@ impl<D: Sync + Send + 'static> Server<D> {
 
         let arc = ArcServer(Arc::new(self));
 
-        let mut http = Http::new();
 
-        http.keep_alive(keep_alive);
-        
+            
         let addr2 = addr.to_socket_addrs().unwrap().next().unwrap();
 
-        match http.bind(&addr2, arc) {
-            Ok(mut server) => {
-                let local_addr = server.local_addr();
-                if shutdown_timeout.is_some() {
-                    server.shutdown_timeout(shutdown_timeout.unwrap());
-                }
-                let listening_server = ListeningServer {
-                    local_addr: local_addr.unwrap(),
-                    handle: server.handle()
-                };
-                server.run().unwrap();
-                Ok(listening_server)
-            },
-            Err(err) => {
-                Err(err)
-            }
-        }
 
+        let (tx, rx): (oneshot::Sender<()>, oneshot::Receiver<()>) = oneshot::channel();
+
+        let child_handle = thread::spawn(move || {
+            
+            let mut http = Http::new();
+
+            http.keep_alive(keep_alive);
+
+            let mut server = http.bind(&addr2, arc)?;
+
+            let local_addr = server.local_addr();
+            if shutdown_timeout.is_some() {
+                server.shutdown_timeout(shutdown_timeout.unwrap());
+            }
+            server.run_until(rx.map_err(|err| { () }))
+
+        });
+
+        let listening_server = ListeningServer {
+            local_addr: addr2,
+            handle: child_handle,
+            stopper: tx
+        };
+        
+        Ok(listening_server)
     }
 
     //TODO: SSL
@@ -147,12 +156,18 @@ impl<D: Sync + Send + 'static> Server<D> {
 /// A server listening on a socket
 pub struct ListeningServer {
     pub local_addr: SocketAddr,
-    pub handle: Handle
+    pub handle: thread::JoinHandle<Result<(), hyper::Error>>,
+    pub stopper: oneshot::Sender<()>
 }
 
 impl ListeningServer {
-        pub fn socket(&self) -> SocketAddr {
-            self.local_addr.clone()
-        }
-        pub fn detach(self) {}
+    pub fn socket(&self) -> SocketAddr {
+        self.local_addr.clone()
+    }
+    pub fn detach(self) {
+        println!("{:?}", "asd1");
+        self.stopper.send(()).unwrap();
+        println!("{:?}", "asd2");
+        self.handle.join();
+    }
 }

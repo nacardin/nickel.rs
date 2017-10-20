@@ -6,7 +6,7 @@ use hyper::client::Response;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 
-fn with_path<F>(path: &str, f: F) where F: FnOnce(&mut Response) {
+fn with_path<F>(path: &str, f: F) where F: FnOnce(Response) {
     run_example("static_files", |port| {
         let url = format!("http://localhost:{}{}", port, path);
         let mut res = response_for(&url);

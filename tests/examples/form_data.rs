@@ -38,7 +38,7 @@ fn post_with_data() {
             .wait()
             .unwrap();
 
-        let s = read_body_to_string(&mut res);
+        let s = read_body_to_string(res);
         assert!(s.contains(r#"John Doe 911 john@doe.com"#), "response didn't have an expected data");
     })
 }
@@ -59,7 +59,7 @@ fn post_without_data() {
             .wait()
             .unwrap();
 
-        let s = read_body_to_string(&mut res);
+        let s = read_body_to_string(res);
         assert!(s.contains(r#"First name? Last name? Phone? Email?"#), "response didn't have an expected data");
     })
 }

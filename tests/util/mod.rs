@@ -1,6 +1,7 @@
-use hyper::client::{Client, Response};
+use hyper::client::{Client, Response, FutureResponse};
 use hyper::Method;
 use hyper::Request;
+use hyper;
 use hyper::Uri;
 use std::str::FromStr;
 use futures::future::Future;
@@ -35,7 +36,7 @@ impl Drop for Bomb {
     }
 }
 
-pub fn response_for_post(url: &str, body: &str) -> Response {
+pub fn response_for_post(url: &str, body: &str) -> FutureResponse {
     let mut core = Core::new().unwrap();
 
     let mut request = Request::new(Method::Post, Uri::from_str(url).unwrap());
@@ -43,33 +44,34 @@ pub fn response_for_post(url: &str, body: &str) -> Response {
 
     Client::new(&core.handle())
         .request(request)
-        .wait()
-        .unwrap()
 }
 
-pub fn response_for_method(method: Method, url: &str) -> Response {
+pub fn response_for_method(method: Method, url: &str) -> FutureResponse {
     let mut core = Core::new().unwrap();
 
     let request = Request::new(method, Uri::from_str(url).unwrap());
 
     Client::new(&core.handle())
         .request(request)
-        .wait()
-        .unwrap()
 }
 
-pub fn response_for(url: &str) -> Response {
+pub fn response_for(url: &str) -> FutureResponse {
     response_for_method(Method::Get, url)
 }
 
-pub fn read_body_to_string(res: Response) -> String {
+pub fn read_body_to_string(res: FutureResponse) -> Box<Future<Item = String, Error = hyper::Error>> {
 
-    let chunk = res.body().concat2().wait().unwrap();
+    Box::new(res.and_then(|res| {
+        res.body().concat2().map(|full_body| {
 
-    String::from_utf8(chunk.to_vec()).unwrap()
+                    String::from_utf8(full_body.to_vec()).unwrap()
+
+                })
+    }))
+                
 }
 
-pub fn read_url(url: &str) -> String {
+pub fn read_url(url: &str) -> Box<Future<Item = String, Error = hyper::Error>> {
     let mut res = response_for(url);
     read_body_to_string(res)
 }

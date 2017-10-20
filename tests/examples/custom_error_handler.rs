@@ -3,7 +3,7 @@ use util::*;
 use hyper::StatusCode;
 use hyper::client::Response;
 
-fn with_path<F>(path: &str, f: F) where F: FnOnce(&mut Response) {
+fn with_path<F>(path: &str, f: F) where F: FnOnce(Response) {
     run_example("custom_error_handler", |port| {
         let url = format!("http://localhost:{}{}", port, path);
         let mut res = response_for(&url);
@@ -14,8 +14,8 @@ fn with_path<F>(path: &str, f: F) where F: FnOnce(&mut Response) {
 #[test]
 fn accepts_some_inputs() {
     with_path("/user/42", |res| {
-        let s = read_body_to_string(res);
         assert_eq!(res.status(), StatusCode::Ok);
+        let s = read_body_to_string(res);
         assert_eq!(s, "User 42 was found!");
     })
 }
@@ -23,8 +23,8 @@ fn accepts_some_inputs() {
 #[test]
 fn has_custom_message_for_custom_error() {
     with_path("/user/19", |res| {
-        let s = read_body_to_string(res);
         assert_eq!(res.status(), StatusCode::ImATeapot);
+        let s = read_body_to_string(res);
         assert_eq!(s, "Teapot activated!");
     });
 }
@@ -32,8 +32,8 @@ fn has_custom_message_for_custom_error() {
 #[test]
 fn has_custom_message_for_fallthrough() {
     with_path("/not_a_handled_path", |res| {
-        let s = read_body_to_string(res);
         assert_eq!(res.status(), StatusCode::NotFound);
+        let s = read_body_to_string(res);
         assert_eq!(s, "<h1>404 - Not Found</h1>");
     })
 }

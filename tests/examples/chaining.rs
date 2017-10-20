@@ -4,7 +4,7 @@ use hyper::client::Response;
 use hyper::Method;
 
 fn with_paths_and_method<F, S>(paths: &[S], method: Method, f: F)
-where F: Fn(&mut Response),
+where F: Fn(Response),
       S: AsRef<str> {
     for path in paths {
         let method = method.clone();
@@ -12,6 +12,7 @@ where F: Fn(&mut Response),
         run_example("chaining", |port| {
             let url = format!("http://localhost:{}{}", port, path.as_ref());
             let mut res = response_for_method(method, &url);
+            println!("awerw2");
             f(res)
         })
     }
@@ -25,7 +26,9 @@ mod expect_200 {
     #[test]
     fn root() {
         with_paths_and_method(&["/"], Get, |res| {
+println!("bad1");
             let s = read_body_to_string(res);
+println!("bad2");
             assert_eq!(s, "Hello World");
         });
     }

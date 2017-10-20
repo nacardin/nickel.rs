@@ -29,7 +29,7 @@ fn sets_headers() {
             );
 
 
-            let body = read_body_to_string(&mut res);
+            let body = read_body_to_string(res);
             assert_eq!(body, "Hello CORS Enabled World");
         }
     })
