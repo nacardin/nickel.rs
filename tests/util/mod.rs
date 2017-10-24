@@ -44,8 +44,8 @@ pub fn response_for_request(req: Request) -> Response {
     let (tx, rx) = oneshot::channel::<Response>();
     let req2 = req.uri().clone();
 
-            let ten_millis = time::Duration::from_millis(25000);
-        thread::sleep(ten_millis);
+        //     let ten_millis = time::Duration::from_millis(25000);
+        // thread::sleep(ten_millis);
         
     let mut core = Core::new().unwrap();
     let work = Client::new(&core.handle())

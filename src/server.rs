@@ -121,7 +121,6 @@ impl<D: Sync + Send + 'static> Server<D> {
                         server.shutdown_timeout(shutdown_timeout.unwrap());
                     }
                     server.run_until(rx.map_err(|err| { () }))
-                    // server.run()
                 }
                 Err(err) => panic!("cannot get address {:?}", err)
             }
@@ -129,13 +128,6 @@ impl<D: Sync + Send + 'static> Server<D> {
         });
 
         let local_addr = socketaddr_rx.wait().unwrap();
-
-        // let now = time::Instant::now();
-        // println!("time1 {:?}, addr {:?}", now.elapsed(), local_addr);
-
-        // let ten_millis = time::Duration::from_millis(15000);
-        // thread::sleep(ten_millis);
-        // println!("time2 {:?}", now.elapsed());
 
         let listening_server = ListeningServer {
             local_addr: local_addr,
@@ -181,7 +173,10 @@ impl ListeningServer {
         self.local_addr.clone()
     }
     pub fn detach(self) {
-        // self.stopper.send(()).unwrap();
-        // self.handle.join().unwrap().unwrap();
+        self.stopper.send(()).unwrap();
+        self.handle.join().unwrap().unwrap();
+    }
+    pub fn wait(self) {
+        self.handle.join().unwrap().unwrap();
     }
 }

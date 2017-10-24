@@ -78,7 +78,7 @@ impl<'a, D> Response<'a, D> {
     ///             // set the Status
     ///         res.set(StatusCode::PermanentRedirect)
     ///             // update a Header value
-    ///            .set(Location::new("http://nickel.rs".into()));
+    ///            .set(Location::new("http://nickel.rs"));
     ///
     ///         ""
     ///     });

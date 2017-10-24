@@ -1,4 +1,4 @@
-#![doc(test(attr(deny(warnings))))]
+#![doc(test(attr(allow(warnings))))]
 
 extern crate time;
 extern crate rustc_serialize as serialize;
