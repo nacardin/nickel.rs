@@ -2,7 +2,7 @@ use std::net::{SocketAddr, ToSocketAddrs};
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 use std;
-use std::thread;
+use std::{thread, time};
 
 use hyper::server::{Http, Service, NewService, Request, Response};
 
@@ -104,6 +104,7 @@ impl<D: Sync + Send + 'static> Server<D> {
 
 
         let (tx, rx): (oneshot::Sender<()>, oneshot::Receiver<()>) = oneshot::channel();
+        let (socketaddr_tx, socketaddr_rx): (oneshot::Sender<SocketAddr>, oneshot::Receiver<SocketAddr>) = oneshot::channel();
 
         let child_handle = thread::spawn(move || {
             
@@ -113,16 +114,31 @@ impl<D: Sync + Send + 'static> Server<D> {
 
             let mut server = http.bind(&addr2, arc)?;
 
-            let local_addr = server.local_addr();
-            if shutdown_timeout.is_some() {
-                server.shutdown_timeout(shutdown_timeout.unwrap());
+            match server.local_addr() {
+                Ok(local_addr) => {
+                    socketaddr_tx.send(local_addr).unwrap();
+                    if shutdown_timeout.is_some() {
+                        server.shutdown_timeout(shutdown_timeout.unwrap());
+                    }
+                    server.run_until(rx.map_err(|err| { () }))
+                    // server.run()
+                }
+                Err(err) => panic!("cannot get address {:?}", err)
             }
-            server.run_until(rx.map_err(|err| { () }))
 
         });
 
+        let local_addr = socketaddr_rx.wait().unwrap();
+
+        // let now = time::Instant::now();
+        // println!("time1 {:?}, addr {:?}", now.elapsed(), local_addr);
+
+        // let ten_millis = time::Duration::from_millis(15000);
+        // thread::sleep(ten_millis);
+        // println!("time2 {:?}", now.elapsed());
+
         let listening_server = ListeningServer {
-            local_addr: addr2,
+            local_addr: local_addr,
             handle: child_handle,
             stopper: tx
         };
@@ -165,9 +181,7 @@ impl ListeningServer {
         self.local_addr.clone()
     }
     pub fn detach(self) {
-        println!("{:?}", "asd1");
-        self.stopper.send(()).unwrap();
-        println!("{:?}", "asd2");
-        self.handle.join();
+        // self.stopper.send(()).unwrap();
+        // self.handle.join().unwrap().unwrap();
     }
 }

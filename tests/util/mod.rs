@@ -1,20 +1,23 @@
-use hyper::client::{Client, Response, FutureResponse};
+use hyper::client::{Client, Response};
 use hyper::Method;
 use hyper::Request;
 use hyper;
 use hyper::Uri;
 use std::str::FromStr;
+
+use std;
+use std::{thread, time};
 use futures::future::Future;
 use futures::Stream;
 
 use std::collections::HashSet;
 use std::process::{Child, Command, Stdio};
-use std::thread;
 use std::io::{BufReader, BufRead, Read};
 use std::sync::Mutex;
 use std::env;
 
 use tokio_core::reactor::Core;
+use futures::sync::oneshot;
 
 struct Bomb(Child);
 
@@ -36,43 +39,60 @@ impl Drop for Bomb {
     }
 }
 
-pub fn response_for_post(url: &str, body: &str) -> FutureResponse {
+pub fn response_for_request(req: Request) -> Response {
+
+    let (tx, rx) = oneshot::channel::<Response>();
+    let req2 = req.uri().clone();
+
+            let ten_millis = time::Duration::from_millis(25000);
+        thread::sleep(ten_millis);
+        
     let mut core = Core::new().unwrap();
+    let work = Client::new(&core.handle())
+        .request(req).then(|res| -> Result<(),()> {
+            match res {
+                Ok(res) => {
+                    tx.send(res);
+                    Ok(())
+                },
+                Err(err) => {
+                    println!("response_for_request req {:?} error {:?}", req2, err);
+                    Err(())
+                }
+            }
+        });
+
+    core.run(work).unwrap();
+
+    rx.wait().unwrap()
+}
+
+pub fn response_for_post(url: &str, body: &str) -> Response {
 
     let mut request = Request::new(Method::Post, Uri::from_str(url).unwrap());
     request.set_body(body.to_owned());
 
-    Client::new(&core.handle())
-        .request(request)
+    response_for_request(request)
 }
 
-pub fn response_for_method(method: Method, url: &str) -> FutureResponse {
-    let mut core = Core::new().unwrap();
-
+pub fn response_for_method(method: Method, url: &str) -> Response {
     let request = Request::new(method, Uri::from_str(url).unwrap());
-
-    Client::new(&core.handle())
-        .request(request)
+    response_for_request(request)
 }
 
-pub fn response_for(url: &str) -> FutureResponse {
+pub fn response_for(url: &str) -> Response {
     response_for_method(Method::Get, url)
 }
 
-pub fn read_body_to_string(res: FutureResponse) -> Box<Future<Item = String, Error = hyper::Error>> {
+pub fn read_body_to_string(res: Response) -> String {
 
-    Box::new(res.and_then(|res| {
-        res.body().concat2().map(|full_body| {
-
-                    String::from_utf8(full_body.to_vec()).unwrap()
-
-                })
-    }))
+    let full_body = res.body().concat2().wait().unwrap();
+    String::from_utf8(full_body.to_vec()).unwrap()
                 
 }
 
-pub fn read_url(url: &str) -> Box<Future<Item = String, Error = hyper::Error>> {
-    let mut res = response_for(url);
+pub fn read_url(url: &str) -> String {
+    let res = response_for(url);
     read_body_to_string(res)
 }
 

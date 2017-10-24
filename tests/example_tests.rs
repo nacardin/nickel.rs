@@ -17,7 +17,7 @@ mod util;
 
 mod examples {
     mod hello_world;
-    mod mount;
+    // mod mount;
     // mod route_data;
     // mod routing;
     // mod template;
