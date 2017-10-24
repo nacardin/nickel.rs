@@ -2,7 +2,6 @@ use groupable::Groupable;
 use hyper::Uri;
 use std::collections::HashMap;
 use url::{form_urlencoded};
-use std::str::FromStr;
 
 type QueryStore = HashMap<String, Vec<String>>;
 
@@ -63,7 +62,7 @@ fn parses_urlencoded_characters() {
 
 #[test]
 fn splits_and_parses_an_url() {
-    use url::Url;
+    use std::str::FromStr;
     let t = |url| {
         let store = parse_uri(&url);
         assert_eq!(store.get("foo"), Some("bar"));

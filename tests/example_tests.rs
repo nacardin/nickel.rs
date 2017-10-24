@@ -1,3 +1,4 @@
+#[allow(resolve_trait_on_defaulted_unit)] // https://github.com/nickel-org/nickel.rs/issues/399
 extern crate rustc_serialize;
 extern crate hyper;
 // HACK: integration_testing example refers to `nickel::foo`
@@ -27,9 +28,9 @@ mod examples {
     mod query_string;
     mod regex_route;
     mod custom_error_handler;
-    // mod static_files;
+    mod static_files;
     mod enable_cors;
-    // mod form_data;
+    mod form_data;
     mod integration_testing;
 
     // #[cfg(feature = "ssl")]

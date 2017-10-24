@@ -2,7 +2,7 @@ use std::net::{SocketAddr, ToSocketAddrs};
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 use std;
-use std::{thread, time};
+use std::thread;
 
 use hyper::server::{Http, Service, NewService, Request, Response};
 
@@ -16,7 +16,6 @@ use futures::Future;
 use std::time::Duration;
 
 use hyper;
-use tokio_core::reactor::Handle;
 use futures::sync::oneshot;
 
 pub struct Server<D> {
@@ -60,10 +59,6 @@ impl<D: Sync + Send + 'static> Service for ArcServer<D> {
             futures::future::ok(res)
 
         }))
-
-        // Box::new(futures::future::ok(hyper::Response::new()))
-
-
     }
 }
 

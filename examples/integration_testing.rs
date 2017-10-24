@@ -133,14 +133,14 @@ mod tests {
         // let other tests hit the server
         thread::sleep(time::Duration::from_secs(1));
 
-        let mut response = server.get("/hits");
+        let response = server.get("/hits");
         response.body();
         0
     }
 
     #[test]
     fn root_responds_with_hello_world() {
-        let mut response = get("/");
+        let response = get("/");
 
         assert_eq!(response.body(), "Hello World");
         assert_eq!(response.status(), StatusCode::Ok);
@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     fn root_responds_with_modified_json() {
-        let mut response = post("/", r#"{ "name": "Rust", "age": 1 }"#);
+        let response = post("/", r#"{ "name": "Rust", "age": 1 }"#);
 
         let chunk = response.body().concat2().wait().unwrap();
         let s = String::from_utf8(chunk.to_vec()).unwrap();
@@ -170,7 +170,7 @@ mod tests {
 
     #[test]
     fn accepts_json_with_missing_fields() {
-        let mut response = post("/", r#"{ "name": "Rust" }"#);
+        let response = post("/", r#"{ "name": "Rust" }"#);
 
         let chunk = response.body().concat2().wait().unwrap();
         let s = String::from_utf8(chunk.to_vec()).unwrap();
@@ -203,7 +203,7 @@ mod tests {
 
     #[test]
     fn has_no_users_by_default() {
-        let mut response = get("/users");
+        let response = get("/users");
 
         let chunk = response.body().concat2().wait().unwrap();
         let s = String::from_utf8(chunk.to_vec()).unwrap();
@@ -225,7 +225,7 @@ mod tests {
             Server::new(server)
         };
 
-        let mut response = server.get("/users");
+        let response = server.get("/users");
 
         let chunk = response.body().concat2().wait().unwrap();
         let s = String::from_utf8(chunk.to_vec()).unwrap();

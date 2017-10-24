@@ -27,7 +27,8 @@ impl RequestOrigin {
 
         Box::new(body.concat2().map(move |full_body| {
 
-            println!("bod {:?}", full_body);
+            println!("{:?} {:?}", method, uri);
+            println!("body {:?}", full_body);
             RequestOrigin {
                 method: method,
                 path: uri.path().to_owned(),

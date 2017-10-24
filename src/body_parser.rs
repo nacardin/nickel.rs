@@ -7,6 +7,9 @@ use std::fmt;
 use std::io::{self, ErrorKind};
 use typemap::Key;
 use urlencoded::Params;
+use urlencoded;
+use hyper::header::ContentType;
+use hyper::mime;
 
 struct BodyReader;
 
@@ -21,11 +24,10 @@ impl<'mw, D> Plugin<Request<'mw, D>> for BodyReader {
     
         match req.body() {
             Some(body) => {
-                let bstr = String::from_utf8(body).unwrap();
-                println!("bodp {:?}", bstr);
-                Ok(bstr)
+                let body_as_string = String::from_utf8(body).unwrap();
+                Ok(body_as_string)
             },
-            None => Ok("nobod".to_owned())
+            None => Ok("".to_owned())
         }
     }
 }
@@ -40,18 +42,17 @@ impl<'mw, D> Plugin<Request<'mw, D>> for FormBodyParser {
     type Error = BodyError;
 
     fn eval(req: &mut Request<D>) -> Result<Params, BodyError> {
-        // match req.origin_ref().headers().get::<ContentType>() {
-        //     Some(&ContentType(ref mime1)) => {
-        //         if mime1.type_() == mime::APPLICATION && mime1.subtype() == mime::WWW_FORM_URLENCODED {
-        //             let body = try!(req.get_ref::<BodyReader>());
-        //             Ok(urlencoded::parse(&*body))
-        //         } else {
-        //             Err(BodyError::WrongContentType)
-        //         }
-        //     }
-        //     _ => Err(BodyError::WrongContentType),
-        // }
-        Err(BodyError::WrongContentType)
+        match req.origin.headers.get::<ContentType>() {
+            Some(&ContentType(ref mime1)) => {
+                if mime1.type_() == mime::APPLICATION && mime1.subtype() == mime::WWW_FORM_URLENCODED {
+                    let body = try!(req.get_ref::<BodyReader>());
+                    Ok(urlencoded::parse(&*body))
+                } else {
+                    Err(BodyError::WrongContentType)
+                }
+            }
+            _ => Err(BodyError::WrongContentType),
+        }
     }
 }
 

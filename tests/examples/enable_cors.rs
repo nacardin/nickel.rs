@@ -11,7 +11,7 @@ fn sets_headers() {
 
         for path in &paths {
             let url = format!("http://localhost:{}/{}", port, path);
-            let mut res = response_for_method(Method::Get, &url);
+            let res = response_for_method(Method::Get, &url);
 
             assert_eq!(
                 res.headers().get(),

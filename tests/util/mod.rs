@@ -1,12 +1,10 @@
 use hyper::client::{Client, Response};
 use hyper::Method;
 use hyper::Request;
-use hyper;
 use hyper::Uri;
 use std::str::FromStr;
 
-use std;
-use std::{thread, time};
+use std::thread;
 use futures::future::Future;
 use futures::Stream;
 
@@ -42,21 +40,16 @@ impl Drop for Bomb {
 pub fn response_for_request(req: Request) -> Response {
 
     let (tx, rx) = oneshot::channel::<Response>();
-    let req2 = req.uri().clone();
-
-        //     let ten_millis = time::Duration::from_millis(25000);
-        // thread::sleep(ten_millis);
         
     let mut core = Core::new().unwrap();
     let work = Client::new(&core.handle())
         .request(req).then(|res| -> Result<(),()> {
             match res {
                 Ok(res) => {
-                    tx.send(res);
+                    tx.send(res).unwrap();
                     Ok(())
                 },
                 Err(err) => {
-                    println!("response_for_request req {:?} error {:?}", req2, err);
                     Err(())
                 }
             }
