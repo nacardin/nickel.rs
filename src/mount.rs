@@ -73,24 +73,16 @@ impl<D, M: Middleware<D>> Middleware<D> for Mount<M> {
     fn invoke<'mw>(&'mw self, req: &mut Request<'mw, D>, res: Response<'mw, D>)
         -> MiddlewareResult<'mw, D> {
 
-        use std::mem;
-        use std::str::FromStr;
-        use hyper;
-
-        let path = &req.origin.path.clone();
-
-        let subpath = match path {
+        let subpath = match &req.path {
             p if p.starts_with(&*self.mount_point) => {
                 format!("/{}", &p[self.mount_point.len()..])
             },
             _ => return Ok(Continue(res))
         };
 
-//TODO
-        // let original = mem::replace(&mut req.origin.uri, hyper::Uri::from_str(&subpath).unwrap());
-        req.origin.update_path("asd");
+        let original_path = req.update_path(subpath);
         let result = self.middleware.invoke(req, res);
-        // req.origin.uri = original;
+        req.update_path(original_path);
         result
     }
 }

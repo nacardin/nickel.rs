@@ -11,7 +11,6 @@ use std::net::SocketAddr;
 pub struct RequestOrigin {
     pub method: hyper::Method,
     pub uri: Uri,
-    // pub path: String,
     pub http_version: hyper::HttpVersion,
     pub headers: hyper::Headers,
     pub body: Option<Vec<u8>>,
@@ -61,7 +60,7 @@ pub struct Request<'mw, D: 'mw = ()> {
 
     data: &'mw D,
 
-    path: String
+    pub path: String
 }
 
 impl<'mw, 'server, D> Request<'mw, D> {
@@ -92,9 +91,9 @@ impl<'mw, 'server, D> Request<'mw, D> {
         &self.data
     }
 
-    pub fn update_path(&mut self, new_path: &str) {
+    pub fn update_path(&mut self, new_path: String) -> String {
         use std::mem;
-        self.path = mem::replace(self.path, new_path);
+        mem::replace(&mut self.path, new_path)
     }
 }
 
