@@ -12,7 +12,6 @@ where F: Fn(Response),
         run_example("chaining", |port| {
             let url = format!("http://localhost:{}{}", port, path.as_ref());
             let res = response_for_method(method, &url);
-            println!("awerw2");
             f(res)
         })
     }
@@ -26,9 +25,7 @@ mod expect_200 {
     #[test]
     fn root() {
         with_paths_and_method(&["/"], Get, |res| {
-println!("bad1");
             let s = read_body_to_string(res);
-println!("bad2");
             assert_eq!(s, "Hello World");
         });
     }

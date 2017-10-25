@@ -20,8 +20,7 @@ impl<D> Middleware<D> for StaticFilesHandler {
     fn invoke<'a>(&self, req: &mut Request<D>, res: Response<'a, D>)
             -> MiddlewareResult<'a, D> {
         match req.origin.method {
-            Get => self.with_file(self.extract_path(req), res),
-            Head => self.with_file(self.extract_path(req), res),
+            Get | Head => self.with_file(self.extract_path(req), res),
             _ => res.next_middleware()
         }
     }
