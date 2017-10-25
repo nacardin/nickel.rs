@@ -11,7 +11,7 @@ use std::net::SocketAddr;
 pub struct RequestOrigin {
     pub method: hyper::Method,
     pub uri: Uri,
-    pub path: String,
+    // pub path: String,
     pub http_version: hyper::HttpVersion,
     pub headers: hyper::Headers,
     pub body: Option<Vec<u8>>,
@@ -31,7 +31,7 @@ impl RequestOrigin {
             println!("body {:?}", full_body);
             RequestOrigin {
                 method: method,
-                path: uri.path().to_owned(),
+                // path: uri.path().to_owned(),
                 uri: uri,
                 http_version: http_version,
                 headers: headers,
@@ -60,6 +60,8 @@ pub struct Request<'mw, D: 'mw = ()> {
     map: TypeMap,
 
     data: &'mw D,
+
+    path: String
 }
 
 impl<'mw, 'server, D> Request<'mw, D> {
@@ -69,7 +71,8 @@ impl<'mw, 'server, D> Request<'mw, D> {
             origin: origin,
             route_result: None,
             map: TypeMap::new(),
-            data: data
+            data: data,
+            path: origin.uri.path().to_owned()
         }
     }
 
@@ -82,11 +85,16 @@ impl<'mw, 'server, D> Request<'mw, D> {
     }
 
     pub fn path_without_query(&self) -> Option<&str> {
-        self.origin.path.splitn(2, '?').next()
+        self.path.splitn(2, '?').next()
     }
 
     pub fn server_data(&self) -> &'mw D {
         &self.data
+    }
+
+    pub fn update_path(&mut self, new_path: &str) {
+        use std::mem;
+        self.path = mem::replace(self.path, new_path);
     }
 }
 
