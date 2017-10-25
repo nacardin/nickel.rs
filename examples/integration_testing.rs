@@ -250,21 +250,6 @@ mod tests {
         use futures::{Future, Stream};
         use std::str::FromStr;
 
-        // pub trait Body {
-        //     fn body(self) -> String;
-        // }
-
-        // impl<'a> Body for &'a mut HyperResponse {
-        //     fn body(self) -> String {
-
-        //         let chunk = self.body().concat2().wait().unwrap();
-        //         let s = String::from_utf8(chunk.to_vec()).unwrap();
-
-        //         println!("Read body: {}", s);
-        //         s
-        //     }
-        // }
-
         /// An example wrapper type to make testing more readable
         pub struct Server(SocketAddr);
         impl Server {

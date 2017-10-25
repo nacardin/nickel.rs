@@ -57,10 +57,7 @@ impl FaviconHandler {
 
     pub fn handle_request<'a, D>(&self, req: &Request<D>, mut res: Response<'a, D>) -> MiddlewareResult<'a, D> {
         match req.origin.method {
-            Get => {
-                self.send_favicon(req, res)
-            },
-            Head => {
+            Get | Head => {
                 self.send_favicon(req, res)
             },
             Options => {
