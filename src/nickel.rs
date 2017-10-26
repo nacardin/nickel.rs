@@ -1,5 +1,6 @@
 use std::net::ToSocketAddrs;
 use std::time::Duration;
+
 use std::env;
 use std::error::Error as StdError;
 use router::{Router, HttpRouter, Matcher};
@@ -7,7 +8,6 @@ use middleware::{MiddlewareStack, Middleware, ErrorHandler};
 use server::{Server};
 use hyper::Method;
 use hyper::StatusCode;
-use hyper::server::{Server as HyperServer};
 
 //pre defined middleware
 use default_error_handler::DefaultErrorHandler;
@@ -21,11 +21,9 @@ use default_error_handler::DefaultErrorHandler;
 /// use nickel::{Nickel, Options};
 /// let mut server = Nickel::new();
 ///
-/// // Don't print to stdout when starting the server
-/// // and force using 8 threads.
+/// // Don't print to stdout when starting the server.
 /// server.options = Options::default()
-///                      .output_on_listen(false)
-///                      .thread_count(Some(8));
+///                      .output_on_listen(false);
 /// ```
 use server::ListeningServer;
 

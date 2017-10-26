@@ -2,7 +2,6 @@ use std::fs::File;
 use std::path::{PathBuf, Path};
 use std::io::Read;
 
-use hyper::Uri;
 use hyper::Method::{Get, Head, Options};
 use hyper::StatusCode;
 use hyper::header;
@@ -53,15 +52,12 @@ impl FaviconHandler {
 
     #[inline]
     pub fn is_favicon_request<D>(req: &Request<D>) -> bool {
-        req.origin.path() == "/favicon.ico"
+        req.path == "/favicon.ico"
     }
 
     pub fn handle_request<'a, D>(&self, req: &Request<D>, mut res: Response<'a, D>) -> MiddlewareResult<'a, D> {
-        match *req.origin.method() {
-            Get => {
-                self.send_favicon(req, res)
-            },
-            Head => {
+        match req.origin.method {
+            Get | Head => {
                 self.send_favicon(req, res)
             },
             Options => {
@@ -78,7 +74,7 @@ impl FaviconHandler {
     }
 
     pub fn send_favicon<'a, D>(&self, req: &Request<D>, mut res: Response<'a, D>) -> MiddlewareResult<'a, D> {
-        debug!("{:?} {:?}", req.origin.method(), self.icon_path.display());
+        debug!("{:?} {:?}", req.origin.method, self.icon_path.display());
         res.set(MediaType::Ico);
         res.send(&*self.icon)
     }

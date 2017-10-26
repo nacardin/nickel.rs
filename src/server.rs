@@ -2,26 +2,26 @@ use std::net::{SocketAddr, ToSocketAddrs};
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 use std;
-use hyper::Result as HttpResult;
-use hyper::server::{Http, Service, NewService, Request, Response, Server as HyperServer};
+use std::thread;
+
+use hyper::server::{Http, Service, NewService, Request, Response};
 
 use middleware::MiddlewareStack;
 use request;
 use response;
 
 use futures;
-use futures::future::FutureResult;
+use futures::Future;
 
 use std::time::Duration;
 
 use hyper;
-use hyper::Body;
-use tokio_core::reactor::Handle;
+use futures::sync::oneshot;
 
 pub struct Server<D> {
     middleware_stack: MiddlewareStack<D>,
     templates: response::TemplateCache,
-    shared_data: D,
+    shared_data: D
 }
 
 
@@ -34,28 +34,31 @@ impl<D: Sync + Send + 'static> Service for ArcServer<D> {
     type Request = Request;
     type Response = Response;
     type Error = hyper::Error;
-    type Future = FutureResult<Response, hyper::Error>;
+    type Future = Box<Future<Item=hyper::Response, Error=hyper::Error>>;
 
     fn call<'a, 'k>(&'a self, req: Request) -> Self::Future {
         
-        let mut res = Response::new();
+        let i = self.0.clone();
 
+        Box::new(request::RequestOrigin::from_internal(req).and_then(move |req_origin| {
 
-        // {
+            let mut res = hyper::Response::new();
+            
+            {
+                let nickel_req = request::Request::from_internal(&req_origin,
+                                                                &i.shared_data);
+            
 
-        //     let nickel_req = request::Request::from_internal(&req,
-        //                                                     &self.0.shared_data);
-        
+                let nickel_res = response::Response::from_internal(&mut res,
+                                                                &i.templates,
+                                                                &i.shared_data);
 
-        //     let nickel_res = response::Response::from_internal(res,
-        //                                                     &self.0.templates,
-        //                                                     &self.0.shared_data);
+                i.middleware_stack.invoke(nickel_req, nickel_res);
+            }
 
-        //     self.0.middleware_stack.invoke(nickel_req, nickel_res);
-        
-        // }
+            futures::future::ok(res)
 
-        futures::future::ok(res)
+        }))
     }
 }
 
@@ -87,31 +90,47 @@ impl<D: Sync + Send + 'static> Server<D> {
                                    keep_alive: bool,
                                    shutdown_timeout: Option<Duration>)
                                     -> Result<ListeningServer, hyper::Error> {
+
         let arc = ArcServer(Arc::new(self));
 
-        let mut http = Http::new();
 
-        http.keep_alive(keep_alive);
-        
+            
         let addr2 = addr.to_socket_addrs().unwrap().next().unwrap();
 
-        match http.bind(&addr2, arc) {
-            Ok(mut server) => {
-                let local_addr = server.local_addr();
-                if shutdown_timeout.is_some() {
-                    server.shutdown_timeout(shutdown_timeout.unwrap());
+
+        let (tx, rx): (oneshot::Sender<()>, oneshot::Receiver<()>) = oneshot::channel();
+        let (socketaddr_tx, socketaddr_rx): (oneshot::Sender<SocketAddr>, oneshot::Receiver<SocketAddr>) = oneshot::channel();
+
+        let child_handle = thread::spawn(move || {
+            
+            let mut http = Http::new();
+
+            http.keep_alive(keep_alive);
+
+            let mut server = http.bind(&addr2, arc)?;
+
+            match server.local_addr() {
+                Ok(local_addr) => {
+                    socketaddr_tx.send(local_addr).unwrap();
+                    if shutdown_timeout.is_some() {
+                        server.shutdown_timeout(shutdown_timeout.unwrap());
+                    }
+                    server.run_until(rx.map_err(|err| { () }))
                 }
-                let listening_server = ListeningServer {
-                    local_addr: local_addr.unwrap(),
-                    handle: server.handle()
-                };
-                server.run().unwrap();
-                Ok(listening_server)
-            },
-            Err(err) => {
-                Err(err)
+                Err(err) => panic!("cannot get address {:?}", err)
             }
-        }
+
+        });
+
+        let local_addr = socketaddr_rx.wait().unwrap();
+
+        let listening_server = ListeningServer {
+            local_addr: local_addr,
+            handle: child_handle,
+            stopper: tx
+        };
+        
+        Ok(listening_server)
     }
 
     //TODO: SSL
@@ -140,5 +159,19 @@ impl<D: Sync + Send + 'static> Server<D> {
 /// A server listening on a socket
 pub struct ListeningServer {
     pub local_addr: SocketAddr,
-    pub handle: Handle
+    pub handle: thread::JoinHandle<Result<(), hyper::Error>>,
+    pub stopper: oneshot::Sender<()>
+}
+
+impl ListeningServer {
+    pub fn socket(&self) -> SocketAddr {
+        self.local_addr.clone()
+    }
+    pub fn detach(self) {
+        self.stopper.send(()).unwrap();
+        self.handle.join().unwrap().unwrap();
+    }
+    pub fn wait(self) {
+        self.handle.join().unwrap().unwrap();
+    }
 }

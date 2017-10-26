@@ -13,7 +13,7 @@ impl<'mw, D> Plugin<Request<'mw, D>> for QueryStringParser {
     type Error = ();
 
     fn eval(req: &mut Request<D>) -> Result<Query, ()> {
-        Ok(parse_uri(&req.origin.uri()))
+        Ok(parse_uri(&req.origin.uri))
     }
 }
 

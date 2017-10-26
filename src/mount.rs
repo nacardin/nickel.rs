@@ -3,8 +3,6 @@ use request::Request;
 use response::Response;
 use middleware::{Continue, Middleware, MiddlewareResult};
 
-use std::mem;
-
 pub trait Mountable<D> {
     fn mount<S: Into<String>, M: Middleware<D>>(&mut self, mount_point: S, middleware: M);
 }
@@ -75,17 +73,16 @@ impl<D, M: Middleware<D>> Middleware<D> for Mount<M> {
     fn invoke<'mw>(&'mw self, req: &mut Request<'mw, D>, res: Response<'mw, D>)
         -> MiddlewareResult<'mw, D> {
 
-            let subpath = match req.origin.path() {
-                p if p.starts_with(&*self.mount_point) => {
-                    format!("/{}", &p[self.mount_point.len()..])
-                },
-                _ => return Ok(Continue(res))
-            };
+        let subpath = match &req.path {
+            p if p.starts_with(&*self.mount_point) => {
+                format!("/{}", &p[self.mount_point.len()..])
+            },
+            _ => return Ok(Continue(res))
+        };
 
-//TODO
-        // let original = mem::replace(&mut req.origin.uri, subpath);
+        let original_path = req.update_path(subpath);
         let result = self.middleware.invoke(req, res);
-        // req.origin.uri = original;
+        req.update_path(original_path);
         result
     }
 }

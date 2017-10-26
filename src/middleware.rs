@@ -2,12 +2,10 @@ use request::Request;
 use response::Response;
 use nickel_error::NickelError;
 
-use hyper::Body;
-
 pub use self::Action::{Continue, Halt};
 
-pub type MiddlewareResult<'mw, D= ()> = Result<Action<Response<'mw, D, Body>,
-                                                      Response<'mw, D, Body>>,
+pub type MiddlewareResult<'mw, D= ()> = Result<Action<Response<'mw, D>,
+                                                      Response<'mw, D>>,
                                                NickelError<'mw, D>>;
 
 pub enum Action<T=(), U=()> {
@@ -18,7 +16,7 @@ pub enum Action<T=(), U=()> {
 // the usage of + Send is weird here because what we really want is + Static
 // but that's not possible as of today. We have to use + Send for now.
 pub trait Middleware<D>: Send + 'static + Sync {
-    fn invoke<'mw>(&'mw self, _req: &mut Request<'mw, D>, res: Response<'mw, D, Body>) -> MiddlewareResult<'mw, D> {
+    fn invoke<'mw>(&'mw self, _req: &mut Request<'mw, D>, res: Response<'mw, D>) -> MiddlewareResult<'mw, D> {
         res.next_middleware()
     }
 }
@@ -58,9 +56,9 @@ impl<D: 'static> MiddlewareStack<D> {
             match handler.invoke(&mut req, res) {
                 Ok(Halt(res)) => {
                     debug!("Halted {:?} {:?} {:?} {:?}",
-                           req.origin.method(),
-                           req.origin.remote_addr(),
-                           req.origin.uri(),
+                           req.origin.method,
+                           req.origin.remote_addr,
+                           req.origin.uri,
                            res.status());
                     let _ = res.end();
                     return
@@ -68,9 +66,9 @@ impl<D: 'static> MiddlewareStack<D> {
                 Ok(Continue(fresh)) => res = fresh,
                 Err(mut err) => {
                     warn!("{:?} {:?} {:?} {:?} {:?}",
-                          req.origin.method(),
-                          req.origin.remote_addr(),
-                          req.origin.uri(),
+                          req.origin.method,
+                          req.origin.remote_addr,
+                          req.origin.uri,
                           err.message,
                           err.stream.as_ref().map(|s| s.status()));
 
@@ -82,9 +80,9 @@ impl<D: 'static> MiddlewareStack<D> {
                     }
 
                     warn!("Unhandled error: {:?} {:?} {:?} {:?} {:?}",
-                          req.origin.method(),
-                          req.origin.remote_addr(),
-                          req.origin.uri(),
+                          req.origin.method,
+                          req.origin.remote_addr,
+                          req.origin.uri,
                           err.message,
                           err.stream.map(|s| s.status()));
                     return

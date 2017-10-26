@@ -107,11 +107,11 @@ impl<D> HttpRouter<D> for Router<D> {
 impl<D: 'static> Middleware<D> for Router<D> {
     fn invoke<'mw>(&'mw self, req: &mut Request<'mw, D>, mut res: Response<'mw, D>)
                           -> MiddlewareResult<'mw, D> {
-        debug!("Router::invoke for '{:?}'", req.origin.uri());
+        debug!("Router::invoke for '{:?}'", req.origin.uri);
 
         // Strip off the querystring when matching a route
         let route_result = req.path_without_query()
-                              .and_then(|path| self.match_route(&req.origin.method(), path));
+                              .and_then(|path| self.match_route(&req.origin.method, path));
 
         debug!("route_result.route.path: {:?}", route_result.as_ref().map(|r| r.route.matcher.path()));
 
